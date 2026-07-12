@@ -1,0 +1,31 @@
+services:
+  backend:
+    build:
+      context: ../backend
+    ports:
+      # Host 8010 -> container 8000 (container-internal port is unaffected
+      # by host port conflicts; matches the local-dev port in run-dev.ps1).
+      - "8010:8000"
+    environment:
+      # Ollama is NOT containerized — it runs natively on the host (GPU/
+      # native access is awkward to pass through in Docker on Windows/Mac,
+      # and it's already running there for local dev). host.docker.internal
+      # is Docker Desktop's DNS name for the host machine.
+      OLLAMA_URL: "http://host.docker.internal:11434"
+      DATABASE_URL: "sqlite+aiosqlite:////data/ai_conversion_os.db"
+      CORS_ORIGINS: '["http://localhost:8080"]'
+    volumes:
+      - backend_data:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ../frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:
