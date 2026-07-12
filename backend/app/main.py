@@ -21,7 +21,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="AI Conversion OS", lifespan=lifespan)
+app = FastAPI(title="Site Concierge", lifespan=lifespan)
 
 settings = get_settings()
 app.add_middleware(

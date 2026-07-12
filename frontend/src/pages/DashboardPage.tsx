@@ -78,7 +78,7 @@ export function DashboardPage() {
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">{businessQuery.data.name}</h1>
-            <p className="text-sm text-white/50">AI Conversion OS — live dashboard</p>
+            <p className="text-sm text-white/50">Site Concierge — live dashboard</p>
           </div>
         </div>
 

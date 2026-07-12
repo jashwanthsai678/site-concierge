@@ -1,4 +1,4 @@
-# AI Conversion OS
+# Site Concierge
 
 An AI voice sales rep for ad landing pages — see **[docs/README.md](docs/README.md)**
 for the demo flow, setup instructions, and architecture overview.

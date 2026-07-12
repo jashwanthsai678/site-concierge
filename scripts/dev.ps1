@@ -10,7 +10,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $backendScript = Join-Path $root 'backend\run-dev.ps1'
 $frontendScript = Join-Path $root 'frontend\run-dev.ps1'
 
-Write-Host "Starting AI Conversion OS (backend + frontend)..."
+Write-Host "Starting Site Concierge (backend + frontend)..."
 
 Start-Process powershell -ArgumentList @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', $backendScript)
 Start-Process powershell -ArgumentList @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', $frontendScript)
