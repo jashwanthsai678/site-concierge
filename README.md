@@ -38,13 +38,45 @@ without a rewrite.
    score, category (Hot/Warm/Cold), and a summary — pushed over a
    WebSocket, not polled.
 
-**Why simulate the company site instead of embedding on a real one?** A true
-cross-domain embeddable widget (a `<script>` snippet + CORS-safe API +
-iframe isolation) is a real production feature, deliberately out of scope
-here — this MVP proves the *product concept* (proactive, in-context voice
-selling) by rendering the mock site and the widget in the same app. The
-widget component (`components/widget/`) is already structured as a
-self-contained unit for that future extraction.
+**Why simulate the company site for the demo, when real embedding exists?**
+The demo's own "site" is rendered in this same app for narrative
+convenience (the ad-simulator flow needs a landing page to click through
+to) — but the widget itself is a real, separately-embeddable product now,
+not confined to pages this app renders. See **Embedding on a real
+website** below.
+
+## Embedding on a real website
+
+Any onboarded business can drop the widget onto their own actual site —
+WordPress, Shopify, a hand-written HTML page, anything — via a two-line
+snippet, generated automatically at the end of onboarding:
+
+```html
+<script>
+  window.SITE_CONCIERGE_CONFIG = { slug: "acme-fitness", apiBase: "https://api.yourapp.com" };
+</script>
+<script src="https://yourapp.com/widget.js" defer></script>
+```
+
+Build the bundle with `npm run build:widget` (outputs a single
+self-contained `dist-widget/widget.js`, separate from the normal SPA
+build). A config global is used rather than `document.currentScript` or a
+`data-*` attribute — the same pattern most embeddable widgets use, since
+`currentScript` is unreliable across browsers for deferred/module scripts.
+
+**Security**: a business must register the exact origin(s) it'll embed
+from (the "Allowed origins" field during onboarding, or
+`allowed_origins` on `POST /api/onboarding/businesses`) — the backend
+validates the request's `Origin` header against that list on every
+`/api/widget/*` call and on the conversation WebSocket handshake itself
+(WebSockets have no CORS preflight mechanism, so this check happens inside
+the route handler, before `accept()`). An unregistered origin gets a clean
+403/connection-close, not a silently broken widget.
+
+**Isolation**: the widget mounts into a shadow root, so neither the host
+page's CSS can affect the widget, nor the widget's own (Tailwind-compiled)
+styles can leak onto the host page — verified with a deliberately hostile
+host-page stylesheet during development.
 
 ## Prerequisites
 
@@ -136,7 +168,11 @@ analytics/     dashboard aggregation queries
 voice/         the WebSocket turn protocol (not audio codecs — those are
                100% browser-side via the Web Speech API)
 api/           FastAPI routers — depend on use cases only, never touch
-               database/ directly
+               database/ directly. cors.py + scoped_cors.py handle the
+               embeddable widget's per-business dynamic CORS (see
+               "Embedding on a real website" above) — deliberately
+               separate from the app-wide static CORSMiddleware, which
+               can't consult per-business data
 config/        settings + stage_prompts.yaml (per-stage sales instructions,
                editable without touching code)
 database/      engine/session + the idempotent seed script
@@ -201,6 +237,16 @@ and its live conversation survive page-to-page navigation.
   pause between turns (thinking, a slow TTS queue) would get force-closed
   and treated like an abandoned visitor. `useConversationSocket` now sends
   one every 30s while connected.
+- **The embeddable widget's CORS is per-business and dynamic, so it can't
+  live in the app-wide `CORSMiddleware`.** Starlette's `CORSMiddleware`
+  answers every preflight OPTIONS request itself, app-wide, against a
+  static origin list fixed at startup — it never reaches routing at all.
+  Since a business's allowed embed origins live in the database and are
+  decided per-request, `/api/widget/*` is carved out of that middleware
+  entirely (`api/scoped_cors.py`) so the widget router's own DB-aware
+  check is what actually decides. The conversation websocket does its own
+  origin check before `accept()` for the same reason — WebSockets have no
+  preflight mechanism at all.
 
 ## Tests
 
