@@ -4,6 +4,7 @@ import { queryClient } from '@/services/queryClient'
 import { AdSimulatorPage } from '@/pages/AdSimulatorPage'
 import { CompanyWebsiteLayout } from '@/pages/CompanyWebsiteLayout'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { OnboardingPage } from '@/pages/OnboardingPage'
 import { HomePage } from '@/pages/company-site/HomePage'
 import { DestinationsPage } from '@/pages/company-site/DestinationsPage'
 import { PricingPage } from '@/pages/company-site/PricingPage'
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="faq" element={<FaqPage />} />
           </Route>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>
