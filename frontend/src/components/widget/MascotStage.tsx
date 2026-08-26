@@ -17,6 +17,7 @@ import type { TranscriptEntry } from '@/types/conversation'
  */
 export function MascotStage({
   businessName,
+  mascotKey,
   connecting,
   orbState,
   transcript,
@@ -36,6 +37,7 @@ export function MascotStage({
   onToggleHistory,
 }: {
   businessName: string
+  mascotKey: string
   connecting: boolean
   orbState: VoiceOrbState
   transcript: TranscriptEntry[]
@@ -120,7 +122,7 @@ export function MascotStage({
             🕘
           </button>
         )}
-        <AnimatedCharacter state={orbState} />
+        <AnimatedCharacter state={orbState} mascotKey={mascotKey} />
       </div>
 
       {!connecting && !endMessage && (

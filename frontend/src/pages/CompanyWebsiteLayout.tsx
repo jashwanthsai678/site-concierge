@@ -89,7 +89,12 @@ export function CompanyWebsiteLayout() {
         © {new Date().getFullYear()} {business.name}. All rights reserved.
       </footer>
 
-      <VoiceWidget slug={slug} businessName={business.name} onTopicMatch={handleTopicMatch} />
+      <VoiceWidget
+        slug={slug}
+        businessName={business.name}
+        mascotKey={business.mascot_key}
+        onTopicMatch={handleTopicMatch}
+      />
     </div>
   )
 }

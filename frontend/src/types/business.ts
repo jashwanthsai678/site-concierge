@@ -5,6 +5,7 @@ export interface BusinessPublic {
   industry: string
   branding_color: string
   logo_url: string | null
+  mascot_key: string
 }
 
 export interface CampaignLandingPage {

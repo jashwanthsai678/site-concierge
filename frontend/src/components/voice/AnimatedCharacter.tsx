@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { mascotAssetsFor } from '@/lib/mascotRegistry'
 
 export type VoiceOrbState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'pointing'
 
@@ -10,8 +11,6 @@ const STATE_LABEL: Record<VoiceOrbState, string> = {
   speaking: 'Speaking…',
   pointing: 'Let me show you…',
 }
-
-const MASCOT_SRC = '/mascot/fullbody.png'
 
 const STATE_ANIMATION: Record<VoiceOrbState, { animate: Record<string, number[]>; duration: number }> = {
   idle: { animate: { y: [0, -4, 0] }, duration: 2.6 },
@@ -27,10 +26,19 @@ const STATE_ANIMATION: Record<VoiceOrbState, { animate: Record<string, number[]>
  * through motion on this single image rather than swapping his body, which
  * would look broken (sudden framing/zoom change) mid-conversation.
  */
-export function AnimatedCharacter({ state, compact = false }: { state: VoiceOrbState; compact?: boolean }) {
+export function AnimatedCharacter({
+  state,
+  mascotKey = 'default',
+  compact = false,
+}: {
+  state: VoiceOrbState
+  mascotKey?: string
+  compact?: boolean
+}) {
   const height = compact ? 190 : 260
   const [failed, setFailed] = useState(false)
   const { animate, duration } = STATE_ANIMATION[state]
+  const { fullbody } = mascotAssetsFor(mascotKey)
 
   return (
     <div className="flex flex-col items-center">
@@ -43,7 +51,7 @@ export function AnimatedCharacter({ state, compact = false }: { state: VoiceOrbS
           <div className="flex h-full w-full items-end justify-center pb-4 text-4xl">🧑‍💼</div>
         ) : (
           <img
-            src={MASCOT_SRC}
+            src={fullbody}
             alt=""
             className="h-full w-full object-contain object-bottom drop-shadow-xl"
             onError={() => setFailed(true)}

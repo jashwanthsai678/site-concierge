@@ -35,10 +35,12 @@ const POINTING_DURATION_MS = 2500
 export function VoiceWidget({
   slug,
   businessName,
+  mascotKey = 'default',
   onTopicMatch,
 }: {
   slug: string
   businessName: string
+  mascotKey?: string
   onTopicMatch?: (topic: Topic) => void
 }) {
   const [state, setState] = useState<WidgetState>('collapsed')
@@ -256,6 +258,7 @@ export function VoiceWidget({
   return (
     <MascotStage
       businessName={businessName}
+      mascotKey={mascotKey}
       connecting={state === 'connecting'}
       orbState={orbState}
       transcript={transcript}

@@ -22,6 +22,11 @@ class Business(Base, TimestampMixin):
     persona_description: Mapped[str] = mapped_column(String(1000))
     branding_color: Mapped[str] = mapped_column(String(20), default="#2a78d6")
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Looked up in the frontend's mascot registry (lib/mascotRegistry.ts) to
+    # pick which character art the widget renders. Only "default" exists
+    # today — the column/API exist so a second mascot is a registry entry,
+    # not a schema change, once more character art is produced.
+    mascot_key: Mapped[str] = mapped_column(String(50), default="default")
     is_active: Mapped[bool] = mapped_column(default=True)
 
     knowledge_items: Mapped[list["KnowledgeItem"]] = relationship(back_populates="business")
