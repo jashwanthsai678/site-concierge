@@ -1,4 +1,4 @@
-from sqlalchemy import String
+from sqlalchemy import JSON, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -28,6 +28,12 @@ class Business(Base, TimestampMixin):
     # not a schema change, once more character art is produced.
     mascot_key: Mapped[str] = mapped_column(String(50), default="default")
     is_active: Mapped[bool] = mapped_column(default=True)
+    # Exact scheme+host origins (e.g. "https://theirsite.com") this business
+    # has registered to embed the widget on. Checked against the request's
+    # Origin header by the widget/* endpoints and the conversation
+    # websocket — NOT by the app's own static CORSMiddleware, which only
+    # knows this app's own origins (see api/cors.py).
+    allowed_origins: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     knowledge_items: Mapped[list["KnowledgeItem"]] = relationship(back_populates="business")
     campaigns: Mapped[list["Campaign"]] = relationship(back_populates="business")

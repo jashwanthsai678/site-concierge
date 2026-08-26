@@ -2,10 +2,10 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.deps import get_llm_client
-from app.api.routers import analytics, conversations, health, leads, onboarding, pages, websocket
+from app.api.routers import analytics, conversations, health, leads, onboarding, pages, websocket, widget
+from app.api.scoped_cors import ScopedCorsMiddleware
 from app.brain.warmup import warm_up
 from app.config.settings import get_settings
 from app.database import seed as seed_module
@@ -25,7 +25,7 @@ app = FastAPI(title="Site Concierge", lifespan=lifespan)
 
 settings = get_settings()
 app.add_middleware(
-    CORSMiddleware,
+    ScopedCorsMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
@@ -39,3 +39,4 @@ app.include_router(leads.router)
 app.include_router(analytics.router)
 app.include_router(conversations.router)
 app.include_router(onboarding.router)
+app.include_router(widget.router)

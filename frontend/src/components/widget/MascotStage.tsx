@@ -18,6 +18,7 @@ import type { TranscriptEntry } from '@/types/conversation'
 export function MascotStage({
   businessName,
   mascotKey,
+  assetBase,
   connecting,
   orbState,
   transcript,
@@ -38,6 +39,7 @@ export function MascotStage({
 }: {
   businessName: string
   mascotKey: string
+  assetBase?: string
   connecting: boolean
   orbState: VoiceOrbState
   transcript: TranscriptEntry[]
@@ -122,7 +124,7 @@ export function MascotStage({
             🕘
           </button>
         )}
-        <AnimatedCharacter state={orbState} mascotKey={mascotKey} />
+        <AnimatedCharacter state={orbState} mascotKey={mascotKey} assetBase={assetBase} />
       </div>
 
       {!connecting && !endMessage && (

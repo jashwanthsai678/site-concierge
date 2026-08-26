@@ -3,6 +3,7 @@ import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.api.cors import origin_allowed
 from app.api.deps import get_llm_client, get_knowledge_provider
 from app.config.settings import get_settings
 from app.conversation.conversation_service import ConversationService
@@ -21,6 +22,21 @@ router = APIRouter()
 
 @router.websocket("/ws/conversation/{conversation_id}")
 async def conversation_ws(websocket: WebSocket, conversation_id: int) -> None:
+    # Origin check happens BEFORE accept() — WebSockets have no CORS
+    # preflight mechanism (see api/scoped_cors.py's docstring), so this is
+    # the only place a widget embedded on an unregistered site gets turned
+    # away, rather than the HTTP-layer /api/widget/* checks.
+    async with async_session_factory() as db:
+        conversation = await db.get(Conversation, conversation_id)
+        if conversation is None:
+            await websocket.close(code=4404)
+            return
+        business = await db.get(Business, conversation.business_id)
+
+    if not origin_allowed(business, websocket.headers.get("origin")):
+        await websocket.close(code=4403)
+        return
+
     await connection_manager.connect_conversation(conversation_id, websocket)
     try:
         # Lenient: wait briefly for `client_ready`, but never block the
@@ -31,16 +47,7 @@ async def conversation_ws(websocket: WebSocket, conversation_id: int) -> None:
         except (TimeoutError, WebSocketDisconnect):
             pass
 
-        async with async_session_factory() as db:
-            conversation = await db.get(Conversation, conversation_id)
-            if conversation is None:
-                await connection_manager.send_to_conversation(
-                    conversation_id, ServerEventType.ERROR,
-                    {"code": "not_found", "message": "Conversation not found."},
-                )
-                return
-            business = await db.get(Business, conversation.business_id)
-            greeting_text = build_greeting(business)
+        greeting_text = build_greeting(business)
 
         await connection_manager.send_to_conversation(
             conversation_id, ServerEventType.GREETING, {"text": greeting_text}

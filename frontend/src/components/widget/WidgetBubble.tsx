@@ -1,11 +1,19 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ACCENT } from '@/lib/palette'
+import { mascotAssetsFor } from '@/lib/mascotRegistry'
 
-const BUBBLE_MASCOT_SRC = '/mascot/welcoming.png'
-
-export function WidgetBubble({ onClick }: { onClick: () => void }) {
+export function WidgetBubble({
+  mascotKey = 'default',
+  assetBase = '',
+  onClick,
+}: {
+  mascotKey?: string
+  assetBase?: string
+  onClick: () => void
+}) {
   const [imageFailed, setImageFailed] = useState(false)
+  const { welcoming } = mascotAssetsFor(mascotKey, assetBase)
 
   return (
     <motion.button
@@ -27,7 +35,7 @@ export function WidgetBubble({ onClick }: { onClick: () => void }) {
         <MicGlyph />
       ) : (
         <img
-          src={BUBBLE_MASCOT_SRC}
+          src={welcoming}
           alt=""
           className="relative h-full w-full object-cover object-top"
           onError={() => setImageFailed(true)}

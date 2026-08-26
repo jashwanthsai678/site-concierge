@@ -44,6 +44,13 @@ class BusinessCreate(BaseModel):
     landing_page_slug: str = Field(max_length=120)
     ad_creative_headline: str = Field(max_length=300)
     ad_creative_body: str = Field(max_length=500)
+    # Exact scheme+host origins (e.g. "https://theirsite.com") this business
+    # will embed the widget from — checked against the request's Origin
+    # header by /api/widget/* and the conversation websocket. Empty by
+    # default; a business with none registered can still use the
+    # demo/ad-simulator flow (that uses this app's own origin), just not a
+    # real embed on an external site yet.
+    allowed_origins: list[str] = Field(default_factory=list)
 
 
 class BusinessOnboardingResponse(BaseModel):

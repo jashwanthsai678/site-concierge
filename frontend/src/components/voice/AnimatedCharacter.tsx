@@ -29,16 +29,18 @@ const STATE_ANIMATION: Record<VoiceOrbState, { animate: Record<string, number[]>
 export function AnimatedCharacter({
   state,
   mascotKey = 'default',
+  assetBase = '',
   compact = false,
 }: {
   state: VoiceOrbState
   mascotKey?: string
+  assetBase?: string
   compact?: boolean
 }) {
   const height = compact ? 190 : 260
   const [failed, setFailed] = useState(false)
   const { animate, duration } = STATE_ANIMATION[state]
-  const { fullbody } = mascotAssetsFor(mascotKey)
+  const { fullbody } = mascotAssetsFor(mascotKey, assetBase)
 
   return (
     <div className="flex flex-col items-center">

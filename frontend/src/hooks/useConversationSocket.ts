@@ -30,23 +30,42 @@ interface ConversationSocketHandlers {
  * One native WebSocket per conversation — see backend/app/voice/ws_protocol.py
  * for the envelope contract this dispatches on. Handlers are held in a ref
  * so identity changes on every render don't force a socket reconnect.
+ *
+ * `apiBase` is only needed by the standalone embeddable widget
+ * (widget-embed.tsx) — when the widget runs on a client's own external
+ * site, `window.location.host` is THEIR site, not our backend, so the WS
+ * URL can't be derived from it. Omit it (the default) for same-origin use,
+ * which covers this app's own demo pages via Vite's dev proxy.
  */
-export function useConversationSocket(conversationId: number | null, handlers: ConversationSocketHandlers) {
+export function useConversationSocket(
+  conversationId: number | null,
+  handlers: ConversationSocketHandlers,
+  apiBase?: string,
+) {
   const [isConnected, setIsConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   const handlersRef = useRef(handlers)
   handlersRef.current = handlers
+  // A visitor can plausibly type and hit send before the handshake
+  // finishes (this raced in practice during automated testing, which acts
+  // faster than a human but the underlying window is real on a slow
+  // connection too) — queue rather than drop, flushed once open.
+  const pendingSendsRef = useRef<string[]>([])
 
   useEffect(() => {
     if (conversationId === null) return
 
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    const ws = new WebSocket(`${protocol}://${window.location.host}/ws/conversation/${conversationId}`)
+    const wsUrl = apiBase
+      ? `${apiBase.replace(/^http/, 'ws')}/ws/conversation/${conversationId}`
+      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/conversation/${conversationId}`
+    const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
     ws.onopen = () => {
       setIsConnected(true)
       ws.send(JSON.stringify({ type: 'client_ready', data: {} }))
+      for (const raw of pendingSendsRef.current) ws.send(raw)
+      pendingSendsRef.current = []
     }
     const heartbeat = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'heartbeat', data: {} }))
@@ -92,14 +111,20 @@ export function useConversationSocket(conversationId: number | null, handlers: C
       ws.close()
       wsRef.current = null
     }
-  }, [conversationId])
+  }, [conversationId, apiBase])
+
+  const send = (raw: string) => {
+    const ws = wsRef.current
+    if (ws?.readyState === WebSocket.OPEN) ws.send(raw)
+    else pendingSendsRef.current.push(raw)
+  }
 
   const sendUtterance = (text: string) => {
-    wsRef.current?.send(JSON.stringify({ type: 'user_utterance', data: { text } }))
+    send(JSON.stringify({ type: 'user_utterance', data: { text } }))
   }
 
   const sendEndConversation = () => {
-    wsRef.current?.send(JSON.stringify({ type: 'end_conversation', data: {} }))
+    send(JSON.stringify({ type: 'end_conversation', data: {} }))
   }
 
   return { isConnected, sendUtterance, sendEndConversation }

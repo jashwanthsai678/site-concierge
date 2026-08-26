@@ -19,6 +19,7 @@ export interface BusinessCreatePayload {
   landing_page_slug: string
   ad_creative_headline: string
   ad_creative_body: string
+  allowed_origins?: string[]
 }
 
 export interface BusinessOnboardingResponse {

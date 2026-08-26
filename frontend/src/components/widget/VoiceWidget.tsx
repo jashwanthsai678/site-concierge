@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/services/api'
+import { startEmbeddedConversation } from '@/services/widgetApi'
 import { useEngagementTracker } from '@/hooks/useEngagementTracker'
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis'
@@ -31,16 +32,32 @@ const POINTING_DURATION_MS = 2500
  * anything about the host site's structure; it just reports "this reply
  * seems to be about X" and lets the host decide what to do with that (see
  * CompanyWebsiteLayout, which navigates to the matching page).
+ *
+ * `apiBase`/`assetBase` are only set by the standalone embeddable bundle
+ * (widget-embed.tsx). `apiBase` switches conversation-start to the
+ * campaign-free `/api/widget/{slug}/start` endpoint and makes the WebSocket
+ * URL absolute, since an external site has no Vite dev proxy and
+ * `window.location` would point at the CLIENT's own domain, not this
+ * backend. `assetBase` does the same for mascot images specifically (see
+ * lib/mascotRegistry.ts) — they're static files served by wherever THIS
+ * app is hosted, which isn't necessarily the same origin as the backend
+ * API. Both omitted (the default), this behaves exactly as before:
+ * relative same-origin calls through the ad-simulator's campaign-based
+ * /api/pages/{slug}/start.
  */
 export function VoiceWidget({
   slug,
   businessName,
   mascotKey = 'default',
+  apiBase,
+  assetBase,
   onTopicMatch,
 }: {
   slug: string
   businessName: string
   mascotKey?: string
+  apiBase?: string
+  assetBase?: string
   onTopicMatch?: (topic: Topic) => void
 }) {
   const [state, setState] = useState<WidgetState>('collapsed')
@@ -143,7 +160,7 @@ export function VoiceWidget({
       pushTranscript('assistant', data.message || "Sorry, something went wrong — could you say that again?")
       if (mode === 'voice') startListening()
     },
-  })
+  }, apiBase)
 
   const handleStart = useCallback(async (chosenMode: CommunicationMode) => {
     engagement.cancel()
@@ -151,7 +168,7 @@ export function VoiceWidget({
     setMode(chosenMode)
     setState('connecting')
     try {
-      const res = await api.startConversation(slug)
+      const res = apiBase ? await startEmbeddedConversation(apiBase, slug) : await api.startConversation(slug)
       setConversationId(res.conversation_id)
       setState('active')
     } catch {
@@ -160,7 +177,7 @@ export function VoiceWidget({
     // engagement is a stable ref-backed object from a hook with no reactive
     // deps that should retrigger this callback's identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug])
+  }, [slug, apiBase])
 
   // Clicking the bubble directly (manual override) asks the same mode
   // question the proactive prompt card does — one place decides voice vs.
@@ -243,7 +260,7 @@ export function VoiceWidget({
           : 'idle'
 
   if (state === 'collapsed') {
-    return <WidgetBubble onClick={handleBubbleClick} />
+    return <WidgetBubble mascotKey={mascotKey} assetBase={assetBase} onClick={handleBubbleClick} />
   }
 
   if (state === 'prompting') {
@@ -259,6 +276,7 @@ export function VoiceWidget({
     <MascotStage
       businessName={businessName}
       mascotKey={mascotKey}
+      assetBase={assetBase}
       connecting={state === 'connecting'}
       orbState={orbState}
       transcript={transcript}

@@ -32,6 +32,7 @@ interface FormState {
   adHeadline: string
   adBody: string
   websiteUrl: string
+  embedOrigins: string
 }
 
 const INITIAL_FORM: FormState = {
@@ -45,6 +46,19 @@ const INITIAL_FORM: FormState = {
   adHeadline: '',
   adBody: '',
   websiteUrl: '',
+  embedOrigins: '',
+}
+
+// The onboarding UI and the widget bundle it links to are both served from
+// this app's own frontend build — swap this for the real deployed API
+// origin once this isn't running against a local dev backend.
+const DEFAULT_API_BASE = 'http://localhost:8010'
+
+function parseOrigins(value: string): string[] {
+  return value
+    .split(/[\n,]/)
+    .map((line) => line.trim())
+    .filter(Boolean)
 }
 
 type Status = 'idle' | 'submitting' | 'success' | 'error'
@@ -108,6 +122,7 @@ export function OnboardingPage() {
         landing_page_slug: form.landingPageSlug,
         ad_creative_headline: form.adHeadline,
         ad_creative_body: form.adBody,
+        allowed_origins: parseOrigins(form.embedOrigins),
       })
 
       const validKnowledgeItems = knowledgeItems.filter((item) => item.content.trim())
@@ -162,6 +177,25 @@ export function OnboardingPage() {
           >
             /site/{result.landingPageSlug}
           </Link>
+        </div>
+
+        <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+            Embed on their real website
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            Paste this before the closing <code>&lt;/body&gt;</code> tag. Only works from an origin registered
+            above — add it later if you skipped that step.
+          </p>
+          <pre className="mt-2 overflow-x-auto rounded-lg bg-gray-900 p-3 text-[11px] leading-relaxed text-gray-100">
+{`<script>
+  window.SITE_CONCIERGE_CONFIG = {
+    slug: "${result.slug}",
+    apiBase: "${DEFAULT_API_BASE}"
+  };
+</script>
+<script src="${window.location.origin}/widget.js" defer></script>`}
+          </pre>
         </div>
         <button
           type="button"
@@ -288,6 +322,22 @@ export function OnboardingPage() {
               onChange={(e) => updateField('adBody', e.target.value)}
               className={INPUT_CLASS}
               placeholder="Personalized training plans, no contracts."
+            />
+          </Field>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-gray-900">Embedding on their real website</h2>
+          <Field
+            label="Allowed origins"
+            hint="One per line — the exact scheme+host(s) they'll embed the widget on, e.g. https://theirsite.com. Required before the embed snippet will work from their site."
+          >
+            <textarea
+              rows={2}
+              value={form.embedOrigins}
+              onChange={(e) => updateField('embedOrigins', e.target.value)}
+              className={INPUT_CLASS}
+              placeholder="https://theirsite.com"
             />
           </Field>
         </section>

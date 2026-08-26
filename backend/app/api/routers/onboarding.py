@@ -35,6 +35,7 @@ async def create_business(payload: BusinessCreate, db: AsyncSession = Depends(ge
         greeting_template=payload.greeting_template,
         branding_color=payload.branding_color,
         mascot_key=payload.mascot_key,
+        allowed_origins=payload.allowed_origins,
     )
     db.add(business)
     try:
