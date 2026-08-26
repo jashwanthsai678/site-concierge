@@ -24,6 +24,7 @@ export function MascotStage({
   micDisabled,
   onMicClick,
   onTextSubmit,
+  textInputAutoFocus,
   onClose,
   endMessage,
   stageStep,
@@ -40,6 +41,7 @@ export function MascotStage({
   micDisabled: boolean
   onMicClick: () => void
   onTextSubmit: (text: string) => void
+  textInputAutoFocus: boolean
   onClose: () => void
   endMessage: string | null
   stageStep: number
@@ -107,7 +109,9 @@ export function MascotStage({
         <MicButton isListening={isListening} isSupported={sttSupported} disabled={micDisabled} onClick={onMicClick} />
       )}
 
-      {!connecting && !endMessage && <TextInputBar disabled={micDisabled} onSubmit={onTextSubmit} />}
+      {!connecting && !endMessage && (
+        <TextInputBar disabled={micDisabled} autoFocus={textInputAutoFocus} onSubmit={onTextSubmit} />
+      )}
     </div>
   )
 }

@@ -6,7 +6,15 @@ import { useState, type FormEvent } from 'react'
  * through the exact same utterance pipeline as speech recognition (see
  * VoiceWidget's handleTextSubmit), so the backend can't tell the difference.
  */
-export function TextInputBar({ disabled, onSubmit }: { disabled?: boolean; onSubmit: (text: string) => void }) {
+export function TextInputBar({
+  disabled,
+  autoFocus,
+  onSubmit,
+}: {
+  disabled?: boolean
+  autoFocus?: boolean
+  onSubmit: (text: string) => void
+}) {
   const [value, setValue] = useState('')
 
   const handleSubmit = (event: FormEvent) => {
@@ -24,6 +32,7 @@ export function TextInputBar({ disabled, onSubmit }: { disabled?: boolean; onSub
         value={value}
         onChange={(event) => setValue(event.target.value)}
         disabled={disabled}
+        autoFocus={autoFocus}
         placeholder="Or type your message…"
         aria-label="Type a message"
         className="min-w-0 flex-1 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 shadow-sm placeholder:text-gray-400 disabled:opacity-40"

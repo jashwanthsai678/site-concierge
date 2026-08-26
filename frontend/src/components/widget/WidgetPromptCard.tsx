@@ -1,13 +1,15 @@
 import { motion } from 'framer-motion'
 import { ACCENT } from '@/lib/palette'
 
+export type CommunicationMode = 'voice' | 'text'
+
 export function WidgetPromptCard({
   businessName,
   onAccept,
   onDismiss,
 }: {
   businessName: string
-  onAccept: () => void
+  onAccept: (mode: CommunicationMode) => void
   onDismiss: () => void
 }) {
   return (
@@ -32,17 +34,26 @@ export function WidgetPromptCard({
           {businessName.charAt(0)}
         </div>
         <p className="pt-1 text-sm text-gray-700">
-          👋 Have a few questions about {businessName}? I'm happy to help — want to chat?
+          👋 Have a few questions about {businessName}? I'm happy to help — how would you like to chat?
         </p>
       </div>
-      <button
-        type="button"
-        onClick={onAccept}
-        className="mt-3 w-full rounded-lg py-2 text-sm font-semibold text-white"
-        style={{ backgroundColor: ACCENT }}
-      >
-        Let's talk
-      </button>
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          onClick={() => onAccept('voice')}
+          className="flex-1 rounded-lg py-2 text-sm font-semibold text-white"
+          style={{ backgroundColor: ACCENT }}
+        >
+          🎙️ Talk
+        </button>
+        <button
+          type="button"
+          onClick={() => onAccept('text')}
+          className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+        >
+          ⌨️ Type
+        </button>
+      </div>
     </motion.div>
   )
 }

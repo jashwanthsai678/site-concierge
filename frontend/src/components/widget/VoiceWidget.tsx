@@ -5,7 +5,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis'
 import { useConversationSocket } from '@/hooks/useConversationSocket'
 import { WidgetBubble } from '@/components/widget/WidgetBubble'
-import { WidgetPromptCard } from '@/components/widget/WidgetPromptCard'
+import { WidgetPromptCard, type CommunicationMode } from '@/components/widget/WidgetPromptCard'
 import { MascotStage } from '@/components/widget/MascotStage'
 import type { VoiceOrbState } from '@/components/voice/AnimatedCharacter'
 import type { TranscriptEntry } from '@/types/conversation'
@@ -49,6 +49,11 @@ export function VoiceWidget({
   const [endMessage, setEndMessage] = useState<string | null>(null)
   const [stage, setStage] = useState('greeting')
   const [showHistory, setShowHistory] = useState(false)
+  // Chosen once, on the prompt card, before a conversation exists — gates
+  // whether the mic auto-activates after the AI speaks (voice) or the text
+  // input gets focus instead (text). Either control stays usable regardless
+  // of this choice; it only decides what activates without an extra tap.
+  const [mode, setMode] = useState<CommunicationMode>('voice')
 
   const dismissedRef = useRef(false)
   const transcriptIdRef = useRef(0)
@@ -98,14 +103,20 @@ export function VoiceWidget({
     onGreeting: (data) => {
       pushTranscript('assistant', data.text)
       enqueue(data.text)
+      if (mode === 'voice') {
+        if (isSpeakingNow()) pendingAutoListenRef.current = true
+        else startListening()
+      }
     },
     onAssistantChunk: (data) => enqueue(data.text),
     onAssistantDone: (data) => {
       setIsThinking(false)
       setStage(data.stage)
       pushTranscript('assistant', data.full_text)
-      if (isSpeakingNow()) pendingAutoListenRef.current = true
-      else startListening()
+      if (mode === 'voice') {
+        if (isSpeakingNow()) pendingAutoListenRef.current = true
+        else startListening()
+      }
 
       const topic = matchTopic(data.full_text)
       if (topic) {
@@ -128,13 +139,14 @@ export function VoiceWidget({
     onError: (data) => {
       setIsThinking(false)
       pushTranscript('assistant', data.message || "Sorry, something went wrong — could you say that again?")
-      startListening()
+      if (mode === 'voice') startListening()
     },
   })
 
-  const handleStart = useCallback(async () => {
+  const handleStart = useCallback(async (chosenMode: CommunicationMode) => {
     engagement.cancel()
     dismissedRef.current = true
+    setMode(chosenMode)
     setState('connecting')
     try {
       const res = await api.startConversation(slug)
@@ -147,6 +159,16 @@ export function VoiceWidget({
     // deps that should retrigger this callback's identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
+
+  // Clicking the bubble directly (manual override) asks the same mode
+  // question the proactive prompt card does — one place decides voice vs.
+  // text, regardless of how the conversation was triggered.
+  const handleBubbleClick = useCallback(() => {
+    engagement.cancel()
+    dismissedRef.current = true
+    setState('prompting')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleDismiss = useCallback(() => {
     dismissedRef.current = true
@@ -203,7 +225,7 @@ export function VoiceWidget({
           : 'idle'
 
   if (state === 'collapsed') {
-    return <WidgetBubble onClick={handleStart} />
+    return <WidgetBubble onClick={handleBubbleClick} />
   }
 
   if (state === 'prompting') {
@@ -226,6 +248,7 @@ export function VoiceWidget({
       micDisabled={isSpeaking || isThinking}
       onMicClick={handleMicClick}
       onTextSubmit={handleTextSubmit}
+      textInputAutoFocus={mode === 'text'}
       onClose={handleClose}
       endMessage={state === 'ended' ? endMessage : null}
       stageStep={stepIndexForStage(stage)}
