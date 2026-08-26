@@ -187,6 +187,22 @@ export function VoiceWidget({
     else startListening()
   }, [isListening, startListening, stopListening])
 
+  // A persistent toggle, not just the one-time prompt-card choice — lets
+  // the visitor change their mind mid-conversation (e.g. someone walks into
+  // the room, or the mic isn't cooperating). Switching to text stops any
+  // active listening; switching to voice immediately starts listening if
+  // it's actually the visitor's turn (not while the AI is speaking/thinking
+  // — mode still governs auto-restart for the *next* turn in that case).
+  const handleModeToggle = useCallback(() => {
+    const next: CommunicationMode = mode === 'voice' ? 'text' : 'voice'
+    if (next === 'text') {
+      stopListening()
+    } else if (!isSpeaking && !isThinking) {
+      startListening()
+    }
+    setMode(next)
+  }, [mode, isSpeaking, isThinking, startListening, stopListening])
+
   // The non-voice fallback path (see TextInputBar) — reuses the exact same
   // utterance pipeline as speech recognition's callback above, so the
   // backend never knows or cares whether the visitor typed or spoke.
@@ -249,6 +265,8 @@ export function VoiceWidget({
       onMicClick={handleMicClick}
       onTextSubmit={handleTextSubmit}
       textInputAutoFocus={mode === 'text'}
+      mode={mode}
+      onModeToggle={handleModeToggle}
       onClose={handleClose}
       endMessage={state === 'ended' ? endMessage : null}
       stageStep={stepIndexForStage(stage)}

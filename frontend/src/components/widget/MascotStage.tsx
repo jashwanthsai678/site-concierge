@@ -4,6 +4,7 @@ import { MicButton } from '@/components/voice/MicButton'
 import { TextInputBar } from '@/components/voice/TextInputBar'
 import { StageProgress } from '@/components/widget/StageProgress'
 import { HistoryDrawer } from '@/components/widget/HistoryDrawer'
+import type { CommunicationMode } from '@/components/widget/WidgetPromptCard'
 import type { TranscriptEntry } from '@/types/conversation'
 
 /**
@@ -25,6 +26,8 @@ export function MascotStage({
   onMicClick,
   onTextSubmit,
   textInputAutoFocus,
+  mode,
+  onModeToggle,
   onClose,
   endMessage,
   stageStep,
@@ -42,6 +45,8 @@ export function MascotStage({
   onMicClick: () => void
   onTextSubmit: (text: string) => void
   textInputAutoFocus: boolean
+  mode: CommunicationMode
+  onModeToggle: () => void
   onClose: () => void
   endMessage: string | null
   stageStep: number
@@ -59,8 +64,21 @@ export function MascotStage({
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-center gap-2 sm:bottom-6 sm:right-6">
       {!connecting && !endMessage && <StageProgress step={stageStep} />}
 
-      <div className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-600 shadow-md backdrop-blur">
-        {businessName}
+      <div className="flex items-center gap-1.5">
+        <div className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-600 shadow-md backdrop-blur">
+          {businessName}
+        </div>
+        {sttSupported && !connecting && !endMessage && (
+          <button
+            type="button"
+            onClick={onModeToggle}
+            aria-label={mode === 'voice' ? 'Switch to typing' : 'Switch to voice'}
+            title={mode === 'voice' ? 'Switch to typing' : 'Switch to voice'}
+            className="rounded-full bg-white/90 px-2.5 py-1 text-xs shadow-md backdrop-blur transition-colors hover:bg-gray-50"
+          >
+            {mode === 'voice' ? '🎙️' : '⌨️'}
+          </button>
+        )}
       </div>
 
       {connecting ? (
