@@ -19,7 +19,7 @@ class FakeKnowledgeProvider:
 async def _make_conversation(db: AsyncSession) -> tuple[Conversation, Business]:
     business = Business(
         slug="test-biz", name="Test Consultancy", industry="study_abroad",
-        greeting_template="Hi, I'm Riya!", persona_description="You are Riya, a helpful consultant.",
+        greeting_template="Hi, I'm Rajan!", persona_description="You are Rajan, a helpful consultant.",
     )
     db.add(business)
     await db.flush()

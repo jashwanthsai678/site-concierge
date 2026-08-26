@@ -57,12 +57,12 @@ async def seed() -> None:
             # themselves — framed as a proactive check-in, not a cold-open
             # popup greeting.
             greeting_template=(
-                "Hi, I'm Riya from Horizon Overseas Education. I noticed you've been "
+                "Hi, I'm Rajan from Horizon Overseas Education. I noticed you've been "
                 "looking around — happy to answer any questions about studying abroad, "
                 "or help you figure out what fits best for you."
             ),
             persona_description=(
-                "You are Riya, an experienced, warm, and consultative study-abroad "
+                "You are Rajan, an experienced, warm, and consultative study-abroad "
                 "counselor at Horizon Overseas Education. You are NOT a chatbot — you "
                 "sound like a real senior consultant who has helped hundreds of students, "
                 "and you are actively selling: your job is to convert this conversation "
