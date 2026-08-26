@@ -8,9 +8,9 @@ dedicated sales rep, and hands a structured lead to a live dashboard.
 
 This is the **investor-demo MVP**: one seeded business (a study-abroad
 consultancy), no auth/multi-tenancy/billing, no external CRM or calendar
-integration, no vector DB. Every module is built production-quality and
-cleanly seamed (see **Architecture** below) so the full product spec can
-grow out of this without a rewrite.
+integration. Every module is built production-quality and cleanly seamed
+(see **Architecture** below) so the full product spec can grow out of this
+without a rewrite.
 
 ## Demo flow
 
@@ -18,9 +18,12 @@ grow out of this without a rewrite.
 2. Click **Learn More** → lands on the business's own (simulated) website
    (`/site/study-abroad-meta`) — plain, light-themed marketing content,
    nothing like our product's branding, exactly as a real advertiser's site
-   would look.
-3. Browse it like a real visitor would — scroll, read. A small floating
-   widget bubble sits in the corner the whole time, unobtrusive.
+   would look. It's a real multi-page site (Home, Destinations, Pricing,
+   Process, Why Us, Testimonials, FAQ under `/site/study-abroad-meta/*`),
+   not one long scrolling page.
+3. Browse it like a real visitor would — scroll, read, click around. A
+   small floating widget bubble sits in the corner the whole time,
+   unobtrusive, and persists across page navigation.
 4. After the visitor shows genuine engagement (dwell time + scroll depth —
    see `useEngagementTracker`), the widget proactively surfaces a prompt:
    *"Have a few questions? I'm happy to help — want to chat?"* — or the
@@ -28,7 +31,9 @@ grow out of this without a rewrite.
 5. Accepting expands the widget into a full voice conversation: the AI
    greets you within ~2 seconds (no LLM call on the first turn — see
    below), qualifies you, answers questions, and works toward booking a
-   call.
+   call. As it talks about a given topic (e.g. pricing), it navigates the
+   visitor to that page as it explains — see `lib/topicMatch.ts` and
+   `CompanyWebsiteLayout`.
 6. Open `/dashboard` in a second tab → the lead appears live with an intent
    score, category (Hot/Warm/Cold), and a summary — pushed over a
    WebSocket, not polled.
@@ -142,6 +147,10 @@ utils/         cross-cutting helpers (JSON recovery from LLM text, time,
 Frontend (`frontend/src/`) mirrors this at the UI layer: `hooks/` own the
 Web Speech API and WebSocket wiring, `components/voice/` and
 `components/dashboard/` are presentational, `pages/` compose them.
+`CompanyWebsiteLayout` is the persistent chrome (nav/footer/widget) around
+the mock company site's actual pages, in `pages/company-site/*` — the
+widget lives in the layout, one level above the routed page content, so it
+and its live conversation survive page-to-page navigation.
 
 ### Key decisions worth knowing before you read the code
 
@@ -176,6 +185,22 @@ Web Speech API and WebSocket wiring, `components/voice/` and
   because this is a live voice conversation where per-turn latency matters.
   Ingestion (`knowledge/ingestion_service.py`) is a separate, standalone
   step, never run from a live turn.
+- **Topic values double as page routes.** `lib/topicMatch.ts`'s keyword
+  matching returns a `Topic` (e.g. `'pricing'`), and `CompanyWebsiteLayout`
+  navigates to `/site/:slug/<topic>` directly — one mapping instead of two,
+  so the AI moving the visitor to a different page is a plain
+  `useNavigate()` call, not a scroll-to-section trick.
+- **`speechSynthesis` is nudged, not trusted.** Chrome/Edge can silently
+  stall mid-utterance after continuous speaking (chromium:679437) and never
+  fire `onend` — `useSpeechSynthesis` periodically calls `pause()`/`resume()`
+  while speaking to work around it, since the mic's auto-restart depends
+  entirely on that callback firing.
+- **The frontend sends heartbeats now.** The WS protocol always supported a
+  `heartbeat` client message to keep an idle connection alive past
+  `conversation_idle_timeout_seconds` (90s), but nothing sent one — a long
+  pause between turns (thinking, a slow TTS queue) would get force-closed
+  and treated like an abandoned visitor. `useConversationSocket` now sends
+  one every 30s while connected.
 
 ## Tests
 
