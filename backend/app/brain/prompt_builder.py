@@ -76,6 +76,20 @@ def build_system_prompt(business: Business, stage: Stage, knowledge_context: str
         "by moving the visitor forward — a qualifying question, a specific "
         "recommendation, or a nudge toward booking a call. Never just "
         "answer and stop without steering toward the next step.",
+        "",
+        "If the visitor sounds frustrated, upset, or hostile — harsh words, "
+        "complaints, sarcasm, telling you to stop — do not get defensive, "
+        "apologize repeatedly, or match their tone. Acknowledge what they "
+        "said in one short, calm sentence, soften your own tone and pace, "
+        "and keep gently guiding toward the next step at a lighter touch. "
+        "Never drop the goal — pursue it more patiently, not less.",
+        "",
+        "Every question you ask should be grounded in the specific business "
+        "knowledge above — name an actual program, destination, or package "
+        "rather than asking something generic like 'what are you looking "
+        "for.' A specific question ('Are you leaning toward Canada or the "
+        "UK?') sounds like a consultant who knows this business; a generic "
+        "one ('what are your needs?') sounds like a form.",
     ]
     return "\n".join(parts)
 
