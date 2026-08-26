@@ -1,0 +1,48 @@
+import { motion } from 'framer-motion'
+import { ACCENT } from '@/lib/palette'
+
+export function WidgetPromptCard({
+  businessName,
+  onAccept,
+  onDismiss,
+}: {
+  businessName: string
+  onAccept: () => void
+  onDismiss: () => void
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      className="fixed bottom-24 right-6 z-50 w-72 rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl"
+    >
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+      >
+        ×
+      </button>
+      <div className="flex items-start gap-3">
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+          style={{ backgroundColor: ACCENT }}
+        >
+          {businessName.charAt(0)}
+        </div>
+        <p className="pt-1 text-sm text-gray-700">
+          👋 Have a few questions about {businessName}? I'm happy to help — want to chat?
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onAccept}
+        className="mt-3 w-full rounded-lg py-2 text-sm font-semibold text-white"
+        style={{ backgroundColor: ACCENT }}
+      >
+        Let's talk
+      </button>
+    </motion.div>
+  )
+}

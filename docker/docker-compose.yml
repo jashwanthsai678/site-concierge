@@ -1,0 +1,28 @@
+services:
+  backend:
+    build:
+      context: ../backend
+    ports:
+      # Host 8010 -> container 8000 (container-internal port is unaffected
+      # by host port conflicts; matches the local-dev port in run-dev.ps1).
+      - "8010:8000"
+    environment:
+      # TokenRouter is a hosted API — no host-network passthrough needed.
+      TOKEN_ROUTER_BASE_URL: "https://api.tokenrouter.com/v1"
+      TOKEN_ROUTER_API_KEY: "${TOKEN_ROUTER_API_KEY}"
+      TOKEN_ROUTER_MODEL: "qwen/qwen3.8-max-free"
+      DATABASE_URL: "sqlite+aiosqlite:////data/ai_conversion_os.db"
+      CORS_ORIGINS: '["http://localhost:8080"]'
+    volumes:
+      - backend_data:/data
+
+  frontend:
+    build:
+      context: ../frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:
