@@ -7,10 +7,10 @@ from app.brain.token_router_client import TokenRouterClient
 from app.config.settings import get_settings
 from app.database.session import async_session_factory
 from app.knowledge.interfaces import KnowledgeProvider
-from app.knowledge.rag_knowledge_provider import RagKnowledgeProvider
+from app.knowledge.static_knowledge_provider import StaticKnowledgeProvider
 
 _llm_client: TokenRouterClient | None = None
-_knowledge_provider: RagKnowledgeProvider | None = None
+_knowledge_provider: StaticKnowledgeProvider | None = None
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -28,5 +28,5 @@ def get_llm_client() -> LLMClient:
 def get_knowledge_provider() -> KnowledgeProvider:
     global _knowledge_provider
     if _knowledge_provider is None:
-        _knowledge_provider = RagKnowledgeProvider()
+        _knowledge_provider = StaticKnowledgeProvider()
     return _knowledge_provider

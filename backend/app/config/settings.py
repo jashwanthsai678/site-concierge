@@ -23,6 +23,9 @@ class Settings(BaseSettings):
 
     conversation_idle_timeout_seconds: float = 90.0
     conversation_history_window: int = 8
+    # Only used by StaticKnowledgeProvider (the active provider whenever
+    # Qdrant isn't configured — see api/deps.py).
+    knowledge_context_char_budget: int = 2000
 
     stage_prompts_path: Path = BASE_DIR / "app" / "config" / "stage_prompts.yaml"
 
