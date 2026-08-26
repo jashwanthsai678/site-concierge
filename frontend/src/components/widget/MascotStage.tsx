@@ -1,6 +1,7 @@
 import { AnimatedCharacter, type VoiceOrbState } from '@/components/voice/AnimatedCharacter'
 import { SpeechBubble } from '@/components/voice/SpeechBubble'
 import { MicButton } from '@/components/voice/MicButton'
+import { TextInputBar } from '@/components/voice/TextInputBar'
 import { StageProgress } from '@/components/widget/StageProgress'
 import { HistoryDrawer } from '@/components/widget/HistoryDrawer'
 import type { TranscriptEntry } from '@/types/conversation'
@@ -22,6 +23,7 @@ export function MascotStage({
   sttSupported,
   micDisabled,
   onMicClick,
+  onTextSubmit,
   onClose,
   endMessage,
   stageStep,
@@ -37,6 +39,7 @@ export function MascotStage({
   sttSupported: boolean
   micDisabled: boolean
   onMicClick: () => void
+  onTextSubmit: (text: string) => void
   onClose: () => void
   endMessage: string | null
   stageStep: number
@@ -103,6 +106,8 @@ export function MascotStage({
       {!connecting && !endMessage && (
         <MicButton isListening={isListening} isSupported={sttSupported} disabled={micDisabled} onClick={onMicClick} />
       )}
+
+      {!connecting && !endMessage && <TextInputBar disabled={micDisabled} onSubmit={onTextSubmit} />}
     </div>
   )
 }

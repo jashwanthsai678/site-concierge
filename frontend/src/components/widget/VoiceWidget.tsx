@@ -165,6 +165,19 @@ export function VoiceWidget({
     else startListening()
   }, [isListening, startListening, stopListening])
 
+  // The non-voice fallback path (see TextInputBar) — reuses the exact same
+  // utterance pipeline as speech recognition's callback above, so the
+  // backend never knows or cares whether the visitor typed or spoke.
+  const handleTextSubmit = useCallback(
+    (text: string) => {
+      if (isListening) stopListening()
+      pushTranscript('visitor', text)
+      setIsThinking(true)
+      sendUtterance(text)
+    },
+    [isListening, stopListening, pushTranscript, sendUtterance],
+  )
+
   // Tapping a proactive suggestion behaves exactly like the visitor having
   // said it out loud — reuses the same utterance pipeline as
   // useSpeechRecognition's callback above, so the backend can't tell the
@@ -212,6 +225,7 @@ export function VoiceWidget({
       sttSupported={sttSupported}
       micDisabled={isSpeaking || isThinking}
       onMicClick={handleMicClick}
+      onTextSubmit={handleTextSubmit}
       onClose={handleClose}
       endMessage={state === 'ended' ? endMessage : null}
       stageStep={stepIndexForStage(stage)}
