@@ -1,22 +1,114 @@
 # Site Concierge
 
-An AI voice sales rep, embedded on a business's own website: a visitor
-clicks an ad, lands on the business's *real* site, browses normally for a
-bit — and once they've shown genuine interest, an embedded AI widget
-proactively offers to help, holds a real voice conversation like a
-dedicated sales rep, and hands a structured lead to a live dashboard.
+**An AI sales concierge any business can drop onto their own website —
+the way a good in-store associate works a real store, not the way a chatbot
+answers a FAQ.**
 
-This started as an **investor-demo MVP** (one seeded business, a
-study-abroad consultancy) and has grown a real self-serve onboarding +
-client portal on top — any business can sign up, configure their own AI,
-and embed it on their actual website. No billing or external CRM/calendar
-integration yet. Every module is built production-quality and cleanly
-seamed (see **Architecture** below) so the rest of the product spec can
-grow out of this without a rewrite.
+## The problem this exists to solve
 
-**Picking this back up?** See [PRODUCTION_ROADMAP.md](PRODUCTION_ROADMAP.md)
-for exactly what's missing before this can run for real, in priority
-order — everything here still runs against `localhost`.
+Most website visitors leave with unanswered questions and no one to ask —
+a contact form is the only option, and most people never fill it out.
+Existing fixes are either a static chatbot that answers FAQs robotically
+without actually moving anyone toward a decision, or an enterprise
+platform (Qualified, Drift-era tools) priced at $40K–$68K/year — completely
+out of reach for the small and mid-sized businesses that make up most of
+the web.
+
+Site Concierge is built for the businesses in between: real companies with
+real websites and real visitors who have real doubts, who can't justify an
+enterprise sales-engagement platform but still lose customers to
+unanswered questions every day.
+
+## The vision
+
+Not "a smarter chatbot" — a system built around the same job a good sales
+associate does in person: notice someone is genuinely interested, start a
+real conversation, answer their actual questions using what you know about
+the business, take their hesitation seriously instead of steamrolling past
+it, and gently guide them toward the next step. Concretely, that means:
+
+- **It only speaks up when a visitor is actually engaged** — real
+  dwell-time-while-visible and scroll depth, not a timer that fires the
+  moment the page loads.
+- **The visitor picks how they want to talk** — voice or text, changeable
+  at any point mid-conversation — not a voice-only experience forced on
+  someone in a quiet room or on a phone with the sound off.
+- **It only knows what the business actually told it** — grounded in that
+  business's own FAQ/pricing/policy content (and, optionally, their real
+  website's content via RAG), never inventing facts beyond that.
+- **It follows a real sales structure**, not a wandering chat: discovery →
+  qualification → recommendation → objection handling → closing → booking
+  — computed deterministically from what's actually been learned about the
+  visitor, not self-reported by the model.
+- **It de-escalates instead of matching hostility.** If a visitor is
+  frustrated or short with it, it acknowledges that calmly, softens its
+  tone, and keeps gently working toward the goal instead of getting
+  defensive or giving up.
+- **Every qualified visitor becomes a scored lead** — intent score,
+  Hot/Warm/Cold category, and a summary — live on a dashboard the moment
+  the conversation happens, not a CSV export at the end of the week.
+
+## Who this is actually for
+
+The right fit is a **high-consideration, trust-sensitive purchase** — a
+business where a real conversation changes whether someone buys, not a
+low-consideration or catalog-browsing purchase where a conversation adds
+nothing:
+
+- Education, study-abroad, and immigration consultancies
+- Coaching, test-prep, and online course providers
+- Fitness studios, wellness clinics, dental/aesthetic practices
+- Financial advisors and insurance agents
+- Home services (roofing, solar, remodeling) — big-ticket, trust-heavy
+- Law firm intake — "do I have a case" qualification
+
+**Deliberately not the target**: e-commerce/retail (a different, already
+well-served category — see Rep.ai), low-consideration high-volume
+purchases, and anything requiring regulated advice-giving (legal/medical
+diagnosis, not just intake) where an AI voice risks real liability.
+
+## How the SaaS actually works
+
+1. **Sign up** (`/onboarding`) — a business creates its account, describes
+   its persona and how the AI should greet visitors, and registers the
+   domain(s) it'll embed on.
+2. **Add what the AI should know** — FAQ/pricing/policy rows, or point it
+   at the business's real website to crawl.
+3. **Get a two-line embed snippet** and paste it onto the real, live
+   website — WordPress, Shopify, hand-written HTML, anything.
+4. **Manage it going forward from the portal** (`/portal`) — edit the
+   persona, fix or extend the knowledge base, re-run ingestion, view
+   qualified leads — without ever touching code or asking anyone for help.
+
+### Why this can be priced for the businesses enterprise tools ignore
+
+The widget's voice runs entirely on the browser's native Web Speech API
+and the reasoning runs on a low/no-cost LLM route — unlike competitors who
+pay per-minute for hosted voice infrastructure, there is close to **zero
+marginal cost per conversation**. That's what makes real SMB pricing
+possible instead of an enterprise-only price tag: the cost structure that
+forces Qualified toward $40K+/year deals doesn't apply here.
+
+**Honest, unresolved risk, not a solved problem**: whether voice-as-default
+actually converts better than text is genuinely unvalidated — see
+`PRODUCTION_ROADMAP.md` and the "voice/text toggle" behavior below, which
+exists specifically because this hasn't been proven either way yet.
+
+## Where this actually stands right now
+
+Built and verified end-to-end this project: the conversation engine
+(voice + text, RAG-optional, objection-handling, lead scoring), a genuinely
+embeddable widget with per-business security, self-serve onboarding, and a
+client portal. **Nothing is deployed yet** — every part of this still runs
+against `localhost`. See **[PRODUCTION_ROADMAP.md](PRODUCTION_ROADMAP.md)**
+for the exact, prioritized list of what's between here and a real launch
+(hosting, a real database, security hardening, and the features — voice
+selection, billing, CRM integration — deliberately not built yet), and for
+the open decisions (hosting platform, LLM tier, voice provider) that need a
+person, not more code.
+
+Everything below this point is the technical documentation: how to run it,
+how the demo works, and how the codebase is put together.
 
 ## Demo flow
 
@@ -32,14 +124,16 @@ order — everything here still runs against `localhost`.
    unobtrusive, and persists across page navigation.
 4. After the visitor shows genuine engagement (dwell time + scroll depth —
    see `useEngagementTracker`), the widget proactively surfaces a prompt:
-   *"Have a few questions? I'm happy to help — want to chat?"* — or the
-   visitor can click the bubble directly at any time to start immediately.
-5. Accepting expands the widget into a full voice conversation: the AI
-   greets you within ~2 seconds (no LLM call on the first turn — see
-   below), qualifies you, answers questions, and works toward booking a
-   call. As it talks about a given topic (e.g. pricing), it navigates the
-   visitor to that page as it explains — see `lib/topicMatch.ts` and
-   `CompanyWebsiteLayout`.
+   *"Have a few questions? I'm happy to help — want to chat?"* — asking
+   whether to talk or type — or the visitor can click the bubble directly
+   at any time to start immediately.
+5. Accepting expands the widget into a full conversation: the AI greets you
+   within ~2 seconds (no LLM call on the first turn — see below), qualifies
+   you, answers questions, and works toward booking a call. As it talks
+   about a given topic (e.g. pricing), it navigates the visitor to that
+   page as it explains — see `lib/topicMatch.ts` and `CompanyWebsiteLayout`.
+   A 🎙️/⌨️ toggle next to the business name lets the visitor switch mode at
+   any point.
 6. Open `/dashboard` in a second tab → the lead appears live with an intent
    score, category (Hot/Warm/Cold), and a summary — pushed over a
    WebSocket, not polled.
@@ -113,7 +207,8 @@ worth closing if `/dashboard` is ever exposed beyond local/internal use.
 
 **Not yet built**: voice selection (blocked on the free-vs-paid TTS
 provider decision) and a real mascot picker (there's only one mascot to
-choose from today) — both deferred, not forgotten.
+choose from today) — both deferred, not forgotten. Full list in
+`PRODUCTION_ROADMAP.md`.
 
 ## Prerequisites
 
@@ -168,6 +263,8 @@ key or connectivity issue.
   is configured.
 - Ad simulator: http://localhost:5173/demo
 - Dashboard: http://localhost:5173/dashboard
+- Onboarding: http://localhost:5173/onboarding
+- Client portal: http://localhost:5173/portal/login
 
 ## Running it with Docker Compose
 
@@ -209,12 +306,13 @@ api/           FastAPI routers — depend on use cases only, never touch
                embeddable widget's per-business dynamic CORS (see
                "Embedding on a real website" above) — deliberately
                separate from the app-wide static CORSMiddleware, which
-               can't consult per-business data
+               can't consult per-business data. auth.py + portal.py are
+               the client portal's login and self-service endpoints.
 config/        settings + stage_prompts.yaml (per-stage sales instructions,
                editable without touching code)
 database/      engine/session + the idempotent seed script
 utils/         cross-cutting helpers (JSON recovery from LLM text, time,
-               ids)
+               ids, password hashing)
 ```
 
 Frontend (`frontend/src/`) mirrors this at the UI layer: `hooks/` own the
@@ -223,7 +321,8 @@ Web Speech API and WebSocket wiring, `components/voice/` and
 `CompanyWebsiteLayout` is the persistent chrome (nav/footer/widget) around
 the mock company site's actual pages, in `pages/company-site/*` — the
 widget lives in the layout, one level above the routed page content, so it
-and its live conversation survive page-to-page navigation.
+and its live conversation survive page-to-page navigation. `pages/portal/*`
+is the client-facing self-service app, gated by `PortalLayout`.
 
 ### Key decisions worth knowing before you read the code
 
@@ -236,7 +335,7 @@ and its live conversation survive page-to-page navigation.
   is what makes the concurrency safe (no write-path overlap) and fast
   (`max(t1,t2)` not `t1+t2`).
 - **Conversation stage is a deterministic rule-based state machine**
-  (`brain/stage_strategy.py`), not self-reported by the LLM — a 1.7B local
+  (`brain/stage_strategy.py`), not self-reported by the LLM — a small
   model claiming its own stage is both unreliable and unfalsifiable. Stage
   is computed from which lead fields are already known, plus a small
   keyword heuristic for objection/booking signals.
@@ -257,7 +356,10 @@ and its live conversation survive page-to-page navigation.
   key per turn) and only sends the resulting vectors to Qdrant — chosen
   because this is a live voice conversation where per-turn latency matters.
   Ingestion (`knowledge/ingestion_service.py`) is a separate, standalone
-  step, never run from a live turn.
+  step, never run from a live turn. `StaticKnowledgeProvider` (flat-row
+  concatenation, no external dependency) is the currently *active* default
+  in `api/deps.py` — RAG is built and tested but sits dormant until Qdrant
+  is actually provisioned for a given environment.
 - **Topic values double as page routes.** `lib/topicMatch.ts`'s keyword
   matching returns a `Topic` (e.g. `'pricing'`), and `CompanyWebsiteLayout`
   navigates to `/site/:slug/<topic>` directly — one mapping instead of two,
@@ -284,6 +386,11 @@ and its live conversation survive page-to-page navigation.
   check is what actually decides. The conversation websocket does its own
   origin check before `accept()` for the same reason — WebSockets have no
   preflight mechanism at all.
+- **Portal auth is an opaque bearer token, not a JWT.** `BusinessSession`
+  (same pattern as `Visitor.session_token`) is trivially revocable on
+  logout — a self-contained JWT would need a blocklist to revoke early.
+  Every portal endpoint depends on `get_current_business` and checks row
+  ownership before mutating, not just that *some* valid session exists.
 
 ## Tests
 
@@ -294,6 +401,7 @@ pytest
 ```
 
 Unit tests cover the pure functions (`stage_strategy.py`, `crm/scoring.py`,
-`utils/json_extraction.py`) with no I/O; an integration test exercises
-`turn_orchestrator.py` end-to-end against a fake `LLMClient` (no real
-TokenRouter call in CI).
+`utils/json_extraction.py`, `utils/security.py`) with no I/O; integration
+tests exercise `turn_orchestrator.py`, the onboarding/widget/CORS routers,
+and the full auth + portal flow (including cross-business isolation) end
+to end against a fake `LLMClient` (no real TokenRouter call in CI).
