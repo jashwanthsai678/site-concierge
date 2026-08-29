@@ -10,6 +10,8 @@ export interface KnowledgeItemPayload {
 
 export interface BusinessCreatePayload {
   slug: string
+  email: string
+  password: string
   name: string
   industry: string
   persona_description: string

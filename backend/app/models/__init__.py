@@ -1,5 +1,6 @@
 from app.models.base import Base
 from app.models.business import Business
+from app.models.business_session import BusinessSession
 from app.models.knowledge import KnowledgeCategory, KnowledgeItem
 from app.models.campaign import Campaign
 from app.models.visitor import Visitor
@@ -10,6 +11,7 @@ from app.models.appointment import Appointment, AppointmentStatus
 __all__ = [
     "Base",
     "Business",
+    "BusinessSession",
     "KnowledgeCategory",
     "KnowledgeItem",
     "Campaign",

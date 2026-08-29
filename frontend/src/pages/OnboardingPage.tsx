@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/services/api'
 import { ACCENT } from '@/lib/palette'
+import { INPUT_CLASS } from '@/lib/formStyles'
+import { DEFAULT_API_BASE } from '@/lib/config'
+import { Field } from '@/components/common/Field'
 import type { KnowledgeCategory, KnowledgeItemPayload } from '@/types/onboarding'
-
-const INPUT_CLASS = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm'
 
 const CATEGORY_LABELS: Record<KnowledgeCategory, string> = {
   faq: 'FAQ',
@@ -24,6 +25,8 @@ function slugify(value: string): string {
 interface FormState {
   name: string
   slug: string
+  email: string
+  password: string
   industry: string
   personaDescription: string
   greetingTemplate: string
@@ -38,6 +41,8 @@ interface FormState {
 const INITIAL_FORM: FormState = {
   name: '',
   slug: '',
+  email: '',
+  password: '',
   industry: '',
   personaDescription: '',
   greetingTemplate: '',
@@ -48,11 +53,6 @@ const INITIAL_FORM: FormState = {
   websiteUrl: '',
   embedOrigins: '',
 }
-
-// The onboarding UI and the widget bundle it links to are both served from
-// this app's own frontend build — swap this for the real deployed API
-// origin once this isn't running against a local dev backend.
-const DEFAULT_API_BASE = 'http://localhost:8010'
 
 function parseOrigins(value: string): string[] {
   return value
@@ -114,6 +114,8 @@ export function OnboardingPage() {
     try {
       const { business, landing_page_slug: landingPageSlug } = await api.createBusiness({
         slug: form.slug,
+        email: form.email,
+        password: form.password,
         name: form.name,
         industry: form.industry,
         persona_description: form.personaDescription,
@@ -197,6 +199,9 @@ export function OnboardingPage() {
 <script src="${window.location.origin}/widget.js" defer></script>`}
           </pre>
         </div>
+        <Link to="/portal/login" className="mt-6 block text-sm font-semibold underline" style={{ color: ACCENT }}>
+          Go to your portal to manage this business →
+        </Link>
         <button
           type="button"
           onClick={() => {
@@ -206,7 +211,7 @@ export function OnboardingPage() {
             setStatus('idle')
             setResult(null)
           }}
-          className="mt-6 text-sm text-gray-500 underline"
+          className="mt-4 text-sm text-gray-500 underline"
         >
           Onboard another business
         </button>
@@ -254,6 +259,27 @@ export function OnboardingPage() {
               onChange={(e) => updateField('industry', e.target.value)}
               className={INPUT_CLASS}
               placeholder="fitness"
+            />
+          </Field>
+          <Field label="Login email" hint="Used to sign in to the portal afterward — not shown publicly">
+            <input
+              required
+              type="email"
+              value={form.email}
+              onChange={(e) => updateField('email', e.target.value)}
+              className={INPUT_CLASS}
+              placeholder="owner@acmefitness.com"
+            />
+          </Field>
+          <Field label="Password" hint="At least 8 characters">
+            <input
+              required
+              type="password"
+              minLength={8}
+              value={form.password}
+              onChange={(e) => updateField('password', e.target.value)}
+              className={INPUT_CLASS}
+              placeholder="••••••••"
             />
           </Field>
           <Field label="Branding color">
@@ -406,15 +432,5 @@ export function OnboardingPage() {
       </form>
       </div>
     </div>
-  )
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <label className="block space-y-1">
-      <span className="text-xs font-medium text-gray-600">{label}</span>
-      {children}
-      {hint && <span className="block text-[11px] text-gray-400">{hint}</span>}
-    </label>
   )
 }

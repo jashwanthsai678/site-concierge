@@ -16,6 +16,11 @@ class Business(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     slug: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    # One login per business for now — no multi-staff-per-business need yet.
+    # Nullable because the original seeded demo business predates the
+    # portal and has no credentials of its own.
+    email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
+    hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
     name: Mapped[str] = mapped_column(String(200))
     industry: Mapped[str] = mapped_column(String(80))
     greeting_template: Mapped[str] = mapped_column(String(500))

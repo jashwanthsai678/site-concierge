@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.knowledge import KnowledgeCategory
 
@@ -35,6 +35,8 @@ class BusinessCreate(BaseModel):
     """
 
     slug: str = Field(max_length=80)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=200)
     name: str = Field(max_length=200)
     industry: str = Field(max_length=80)
     persona_description: str = Field(max_length=1000)
@@ -74,3 +76,41 @@ class IngestRequest(BaseModel):
 
 class IngestResponse(BaseModel):
     chunks_ingested: int
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class LoginResponse(BaseModel):
+    token: str
+    business: BusinessPublic
+
+
+class PortalBusinessUpdate(BaseModel):
+    """All fields optional — PATCH semantics, only what's sent gets changed."""
+
+    name: str | None = Field(default=None, max_length=200)
+    industry: str | None = Field(default=None, max_length=80)
+    persona_description: str | None = Field(default=None, max_length=1000)
+    greeting_template: str | None = Field(default=None, max_length=500)
+    branding_color: str | None = Field(default=None, max_length=20)
+    mascot_key: str | None = Field(default=None, max_length=50)
+    allowed_origins: list[str] | None = None
+
+
+class KnowledgeItemRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    category: KnowledgeCategory
+    question: str | None
+    content: str
+    display_order: int
+
+
+class KnowledgeItemUpdate(BaseModel):
+    category: KnowledgeCategory | None = None
+    question: str | None = Field(default=None, max_length=300)
+    content: str | None = None

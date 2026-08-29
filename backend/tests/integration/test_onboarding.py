@@ -27,6 +27,8 @@ def _make_client(db_session: AsyncSession) -> TestClient:
 
 _CREATE_PAYLOAD = {
     "slug": "test-biz",
+    "email": "owner@test-biz.example",
+    "password": "correct-horse-battery-staple",
     "name": "Test Biz",
     "industry": "services",
     "persona_description": "You are a helpful consultant.",

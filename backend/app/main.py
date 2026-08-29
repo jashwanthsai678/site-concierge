@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.deps import get_llm_client
-from app.api.routers import analytics, conversations, health, leads, onboarding, pages, websocket, widget
+from app.api.routers import analytics, auth, conversations, health, leads, onboarding, pages, portal, websocket, widget
 from app.api.scoped_cors import ScopedCorsMiddleware
 from app.brain.warmup import warm_up
 from app.config.settings import get_settings
@@ -40,3 +40,5 @@ app.include_router(analytics.router)
 app.include_router(conversations.router)
 app.include_router(onboarding.router)
 app.include_router(widget.router)
+app.include_router(auth.router)
+app.include_router(portal.router)

@@ -5,6 +5,12 @@ import { AdSimulatorPage } from '@/pages/AdSimulatorPage'
 import { CompanyWebsiteLayout } from '@/pages/CompanyWebsiteLayout'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
+import { PortalLoginPage } from '@/pages/portal/PortalLoginPage'
+import { PortalLayout } from '@/pages/portal/PortalLayout'
+import { PortalSettingsPage } from '@/pages/portal/PortalSettingsPage'
+import { PortalKnowledgePage } from '@/pages/portal/PortalKnowledgePage'
+import { PortalEmbedPage } from '@/pages/portal/PortalEmbedPage'
+import { PortalLeadsPage } from '@/pages/portal/PortalLeadsPage'
 import { HomePage } from '@/pages/company-site/HomePage'
 import { DestinationsPage } from '@/pages/company-site/DestinationsPage'
 import { PricingPage } from '@/pages/company-site/PricingPage'
@@ -31,6 +37,13 @@ export default function App() {
           </Route>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/portal/login" element={<PortalLoginPage />} />
+          <Route path="/portal" element={<PortalLayout />}>
+            <Route index element={<PortalSettingsPage />} />
+            <Route path="knowledge" element={<PortalKnowledgePage />} />
+            <Route path="embed" element={<PortalEmbedPage />} />
+            <Route path="leads" element={<PortalLeadsPage />} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

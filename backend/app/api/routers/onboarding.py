@@ -15,20 +15,24 @@ from app.schemas.business import (
     IngestResponse,
     KnowledgeBulkCreate,
 )
+from app.utils.security import hash_password
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 
 
 @router.post("/businesses", response_model=BusinessOnboardingResponse, status_code=201)
 async def create_business(payload: BusinessCreate, db: AsyncSession = Depends(get_db)) -> BusinessOnboardingResponse:
-    """Step 1 of self-serve onboarding: create the business + one campaign
-    so it has a working demo URL immediately. Knowledge (see
-    add_knowledge_items below) and RAG ingestion (see trigger_ingestion) are
-    separate steps — a client fills in persona/branding first, then adds
-    what they want the AI to know, in whatever order suits their setup flow.
+    """Step 1 of self-serve onboarding: create the business + its portal
+    login + one campaign so it has a working demo URL immediately.
+    Knowledge (see add_knowledge_items below) and RAG ingestion (see
+    trigger_ingestion) are separate steps — a client fills in
+    persona/branding first, then adds what they want the AI to know, in
+    whatever order suits their setup flow.
     """
     business = Business(
         slug=payload.slug,
+        email=payload.email,
+        hashed_password=hash_password(payload.password),
         name=payload.name,
         industry=payload.industry,
         persona_description=payload.persona_description,
@@ -42,7 +46,9 @@ async def create_business(payload: BusinessCreate, db: AsyncSession = Depends(ge
         await db.flush()
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=409, detail=f"Slug '{payload.slug}' is already taken.") from None
+        raise HTTPException(
+            status_code=409, detail=f"Slug '{payload.slug}' or email '{payload.email}' is already taken.",
+        ) from None
 
     campaign = Campaign(
         business_id=business.id,
