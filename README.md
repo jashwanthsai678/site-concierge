@@ -14,6 +14,10 @@ integration yet. Every module is built production-quality and cleanly
 seamed (see **Architecture** below) so the rest of the product spec can
 grow out of this without a rewrite.
 
+**Picking this back up?** See [PRODUCTION_ROADMAP.md](PRODUCTION_ROADMAP.md)
+for exactly what's missing before this can run for real, in priority
+order — everything here still runs against `localhost`.
+
 ## Demo flow
 
 1. Open `/demo` — a simulated Meta ad card.
