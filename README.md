@@ -6,11 +6,13 @@ bit — and once they've shown genuine interest, an embedded AI widget
 proactively offers to help, holds a real voice conversation like a
 dedicated sales rep, and hands a structured lead to a live dashboard.
 
-This is the **investor-demo MVP**: one seeded business (a study-abroad
-consultancy), no auth/multi-tenancy/billing, no external CRM or calendar
-integration. Every module is built production-quality and cleanly seamed
-(see **Architecture** below) so the full product spec can grow out of this
-without a rewrite.
+This started as an **investor-demo MVP** (one seeded business, a
+study-abroad consultancy) and has grown a real self-serve onboarding +
+client portal on top — any business can sign up, configure their own AI,
+and embed it on their actual website. No billing or external CRM/calendar
+integration yet. Every module is built production-quality and cleanly
+seamed (see **Architecture** below) so the rest of the product spec can
+grow out of this without a rewrite.
 
 ## Demo flow
 
@@ -77,6 +79,37 @@ the route handler, before `accept()`). An unregistered origin gets a clean
 page's CSS can affect the widget, nor the widget's own (Tailwind-compiled)
 styles can leak onto the host page — verified with a deliberately hostile
 host-page stylesheet during development.
+
+## Client portal
+
+Onboarding (`/onboarding`) now also creates a login — a business is created
+with a password, not just a persona. From `/portal/login`, that business can:
+
+- Edit their own persona, greeting, branding color, and allowed embed
+  origins (`/portal`)
+- Add, edit, and delete their own knowledge rows, and re-run RAG ingestion
+  on demand (`/portal/knowledge`) — onboarding's own knowledge endpoint can
+  only add rows; the portal is where mistakes get fixed
+- View and copy their embed snippet (`/portal/embed`)
+- See their own qualified leads (`/portal/leads`)
+
+Auth is an opaque bearer token (`BusinessSession`, same pattern as
+`Visitor.session_token`) rather than a JWT — trivially revocable on logout,
+which a self-contained token isn't without a blocklist. Every portal
+endpoint depends on `get_current_business` (resolves the token) and checks
+row ownership before any mutation, so one business can never edit or even
+discover another's data by guessing an ID (verified: a cross-business
+delete attempt 404s, not 403 — it doesn't even confirm the row exists).
+
+**Known gap, left alone on purpose**: the existing internal `/api/leads`
+endpoint (used by the separate operator-facing `/dashboard`) still trusts a
+`business_id` query parameter with no auth at all. It wasn't retrofitted
+here since that dashboard is a different audience (you, not a client) —
+worth closing if `/dashboard` is ever exposed beyond local/internal use.
+
+**Not yet built**: voice selection (blocked on the free-vs-paid TTS
+provider decision) and a real mascot picker (there's only one mascot to
+choose from today) — both deferred, not forgotten.
 
 ## Prerequisites
 
