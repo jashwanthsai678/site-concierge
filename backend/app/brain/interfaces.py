@@ -10,8 +10,10 @@ class LLMClient(ABC):
 
     @abstractmethod
     async def chat(self, messages: list[dict], *, json_mode: bool = False) -> dict:
-        """Non-streaming chat call. Returns the raw `message` dict
-        (`{"content": str, "thinking": str | None}`)."""
+        """Non-streaming chat call. Returns
+        `{"content": str, "thinking": str | None, "usage": dict | None}` —
+        `usage` (prompt/completion/total token counts) is provider-reported
+        and may be `None` if the provider doesn't return one."""
 
     @abstractmethod
     def chat_stream(self, messages: list[dict]) -> AsyncIterator[str]:

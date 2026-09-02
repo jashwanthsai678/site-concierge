@@ -6,6 +6,7 @@ from app.api.deps import get_db
 from app.api.routers import auth, onboarding, portal
 from app.models.business import Business
 from app.models.knowledge import KnowledgeCategory, KnowledgeItem
+from app.models.token_usage import TokenUsageLog
 from app.utils.security import hash_password
 
 EMAIL = "owner@auth-test.example"
@@ -162,3 +163,51 @@ async def test_logout_invalidates_the_token(db_session: AsyncSession):
     assert client.get("/api/portal/me", headers=headers).status_code == 200
     assert client.post("/api/auth/logout", headers=headers).status_code == 204
     assert client.get("/api/portal/me", headers=headers).status_code == 401
+
+
+async def test_usage_summary_sums_by_call_type_and_flags_estimates(db_session: AsyncSession):
+    business = await _seed_business(db_session)
+    db_session.add_all([
+        TokenUsageLog(business_id=business.id, call_type="reply", total_tokens=100, is_estimated=True),
+        TokenUsageLog(business_id=business.id, call_type="reply", total_tokens=50, is_estimated=True),
+        TokenUsageLog(
+            business_id=business.id, call_type="extraction",
+            prompt_tokens=30, completion_tokens=20, total_tokens=50, is_estimated=False,
+        ),
+    ])
+    await db_session.commit()
+
+    client = _make_client(db_session)
+    token = await _login(client)
+
+    response = client.get("/api/portal/usage", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {
+        "total_tokens": 200,
+        "reply_tokens": 150,
+        "extraction_tokens": 50,
+        "call_count": 3,
+        "includes_estimates": True,
+    }
+
+
+async def test_usage_summary_is_scoped_to_the_logged_in_business_only(db_session: AsyncSession):
+    business_a = await _seed_business(db_session, slug="usage-a", email="usage-a@example.com")
+    business_b = await _seed_business(
+        db_session, slug="usage-b", email="usage-b@example.com", password="different-password",
+    )
+    db_session.add_all([
+        TokenUsageLog(business_id=business_a.id, call_type="reply", total_tokens=100),
+        TokenUsageLog(business_id=business_b.id, call_type="reply", total_tokens=999),
+    ])
+    await db_session.commit()
+
+    client = _make_client(db_session)
+    login_a = client.post("/api/auth/login", json={"email": "usage-a@example.com", "password": PASSWORD})
+    headers = {"Authorization": f"Bearer {login_a.json()['token']}"}
+
+    response = client.get("/api/portal/usage", headers=headers)
+
+    assert response.json()["total_tokens"] == 100  # business_b's 999 must not leak in

@@ -26,32 +26,36 @@ Output ONLY the JSON object. No markdown fences, no explanation, no other text."
 _RETRY_NUDGE = "Reminder: respond with ONLY the JSON object described above, nothing else."
 
 
-async def extract(llm_client: LLMClient, *, history: list[Message], utterance: str) -> tuple[LeadExtraction, bool]:
+async def extract(
+    llm_client: LLMClient, *, history: list[Message], utterance: str,
+) -> tuple[LeadExtraction, bool, dict | None]:
     """Runs the structured-extraction LLM call and defensively parses its
-    output. Never raises. Returns `(extraction, ok)`: `ok=False` means total
-    parse failure after one retry — the caller (turn_orchestrator) should
-    skip publishing a `lead_update` for this turn and count the failure,
-    rather than confusing "genuinely nothing new said" with "extraction
-    broke", which look identical in the LeadExtraction value alone. The
-    conversational reply path is entirely independent, so a bad extraction
-    never breaks the visitor's turn, only dashboard freshness for that turn.
+    output. Never raises. Returns `(extraction, ok, usage)`: `ok=False`
+    means total parse failure after one retry — the caller (turn_orchestrator)
+    should skip publishing a `lead_update` for this turn and count the
+    failure, rather than confusing "genuinely nothing new said" with
+    "extraction broke", which look identical in the LeadExtraction value
+    alone. The conversational reply path is entirely independent, so a bad
+    extraction never breaks the visitor's turn, only dashboard freshness for
+    that turn. `usage` is whichever call actually ran last — tokens were
+    spent on it either way, parse failure or not.
     """
     messages = _build_messages(history, utterance)
 
-    content = await _call_and_get_content(llm_client, messages)
+    content, usage = await _call_and_get_content(llm_client, messages)
     parsed = _parse(content)
     if parsed is not None:
-        return parsed, True
+        return parsed, True, usage
 
     logger.warning("Extraction JSON parse failed, retrying once. Raw content: %r", content[:300])
     retry_messages = [*messages, {"role": "user", "content": _RETRY_NUDGE}]
-    content = await _call_and_get_content(llm_client, retry_messages)
+    content, usage = await _call_and_get_content(llm_client, retry_messages)
     parsed = _parse(content)
     if parsed is not None:
-        return parsed, True
+        return parsed, True, usage
 
     logger.warning("Extraction JSON parse failed after retry. Raw content: %r", content[:300])
-    return LeadExtraction(), False
+    return LeadExtraction(), False, usage
 
 
 def _build_messages(history: list[Message], utterance: str) -> list[dict]:
@@ -62,9 +66,9 @@ def _build_messages(history: list[Message], utterance: str) -> list[dict]:
     return messages
 
 
-async def _call_and_get_content(llm_client: LLMClient, messages: list[dict]) -> str:
+async def _call_and_get_content(llm_client: LLMClient, messages: list[dict]) -> tuple[str, dict | None]:
     message = await llm_client.chat(messages, json_mode=True)
-    return message.get("content", "")
+    return message.get("content", ""), message.get("usage")
 
 
 def _parse(content: str) -> LeadExtraction | None:

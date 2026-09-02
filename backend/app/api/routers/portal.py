@@ -7,6 +7,7 @@ from app.crm.lead_repository import LeadRepository
 from app.knowledge.ingestion_service import ingest_business
 from app.models.business import Business
 from app.models.knowledge import KnowledgeItem
+from app.models.token_usage import TokenUsageLog
 from app.schemas.business import (
     BusinessPublic,
     IngestRequest,
@@ -17,6 +18,7 @@ from app.schemas.business import (
     PortalBusinessUpdate,
 )
 from app.schemas.lead import LeadRead
+from app.schemas.usage import UsageSummary
 
 router = APIRouter(prefix="/api/portal", tags=["portal"])
 
@@ -104,6 +106,31 @@ async def trigger_my_ingestion(
             detail="Could not reach the RAG vector store — check QDRANT_URL/QDRANT_API_KEY in backend/.env.",
         ) from exc
     return IngestResponse(chunks_ingested=chunk_count)
+
+
+@router.get("/usage", response_model=UsageSummary)
+async def get_my_usage(
+    business: Business = Depends(get_current_business), db: AsyncSession = Depends(get_db),
+) -> UsageSummary:
+    """Cost visibility that didn't exist before this — total LLM tokens
+    spent for this business, broken down by call type. `reply` tokens are
+    an estimate (~4 chars/token on the streamed text, see
+    conversation/turn_orchestrator.py's `_record_usage`); `extraction`
+    tokens are exact, as reported by TokenRouter.
+    """
+    rows = (
+        await db.execute(select(TokenUsageLog).where(TokenUsageLog.business_id == business.id))
+    ).scalars().all()
+
+    reply_tokens = sum(row.total_tokens for row in rows if row.call_type == "reply")
+    extraction_tokens = sum(row.total_tokens for row in rows if row.call_type == "extraction")
+    return UsageSummary(
+        total_tokens=reply_tokens + extraction_tokens,
+        reply_tokens=reply_tokens,
+        extraction_tokens=extraction_tokens,
+        call_count=len(rows),
+        includes_estimates=any(row.is_estimated for row in rows),
+    )
 
 
 @router.get("/leads", response_model=list[LeadRead])

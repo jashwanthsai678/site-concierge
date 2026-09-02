@@ -12,6 +12,7 @@ from app.crm.lead_service import LeadService
 from app.knowledge.interfaces import KnowledgeProvider
 from app.models.business import Business
 from app.models.conversation import Conversation, ConversationStatus, Message, MessageRole, Stage
+from app.models.token_usage import TokenUsageLog
 from app.utils.text import split_first_sentence
 from app.voice.ws_manager import ConnectionManager
 from app.voice.ws_protocol import ServerEventType
@@ -67,7 +68,7 @@ class TurnOrchestrator:
         history = await self._conversations.get_windowed_history(conversation.id)
         knowledge_context = await self._knowledge_provider.get_context(self._db, business.id, utterance)
 
-        reply_text, (extraction, extraction_ok) = await asyncio.gather(
+        reply_text, (extraction, extraction_ok, extraction_usage) = await asyncio.gather(
             self._stream_reply(
                 conversation.id, business, stage_for_reply, knowledge_context, known_fields, history, utterance,
             ),
@@ -75,6 +76,11 @@ class TurnOrchestrator:
         )
 
         await self._conversations.append_message(conversation.id, MessageRole.ASSISTANT, reply_text)
+        # Staged here (not committed) so it rides along with whichever
+        # commit happens next below — tokens were spent on both calls
+        # regardless of which branch (extraction-failure or success) runs.
+        self._record_usage(business.id, conversation.id, "reply", estimated_tokens=len(reply_text) // 4)
+        self._record_usage(business.id, conversation.id, "extraction", usage=extraction_usage)
 
         # --- All DB writes for this turn happen above/below this line, and
         # are committed BEFORE any further websocket notification is sent.
@@ -193,3 +199,33 @@ class TurnOrchestrator:
             )
 
         return full_text
+
+    def _record_usage(
+        self,
+        business_id: int,
+        conversation_id: int,
+        call_type: str,
+        *,
+        usage: dict | None = None,
+        estimated_tokens: int | None = None,
+    ) -> None:
+        """Stages a TokenUsageLog row (never commits — rides along with
+        whichever commit the caller does next). `usage` (exact, provider-
+        reported) takes priority; `estimated_tokens` (a ~4-chars/token
+        guess) is the fallback for the streamed reply call, which never
+        reliably carries a `usage` field the way the non-streaming
+        extraction call does.
+        """
+        if usage:
+            self._db.add(TokenUsageLog(
+                business_id=business_id, conversation_id=conversation_id, call_type=call_type,
+                prompt_tokens=usage.get("prompt_tokens") or 0,
+                completion_tokens=usage.get("completion_tokens") or 0,
+                total_tokens=usage.get("total_tokens") or 0,
+                is_estimated=False,
+            ))
+        elif estimated_tokens is not None:
+            self._db.add(TokenUsageLog(
+                business_id=business_id, conversation_id=conversation_id, call_type=call_type,
+                completion_tokens=estimated_tokens, total_tokens=estimated_tokens, is_estimated=True,
+            ))

@@ -7,6 +7,7 @@ from app.models.visitor import Visitor
 from app.models.conversation import Conversation, ConversationStatus, Message, MessageRole, Stage
 from app.models.lead import Lead, LeadCategory, LeadStatus
 from app.models.appointment import Appointment, AppointmentStatus
+from app.models.token_usage import TokenUsageLog
 
 __all__ = [
     "Base",
@@ -26,4 +27,5 @@ __all__ = [
     "LeadStatus",
     "Appointment",
     "AppointmentStatus",
+    "TokenUsageLog",
 ]
