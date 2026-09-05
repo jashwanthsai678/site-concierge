@@ -3,7 +3,13 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/services/api'
 import type { ConversationRead } from '@/types/analytics'
 
-export function ConversationHistoryList({ conversations }: { conversations: ConversationRead[] }) {
+export function ConversationHistoryList({
+  conversations,
+  businessId,
+}: {
+  conversations: ConversationRead[]
+  businessId: number
+}) {
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
   return (
@@ -26,17 +32,17 @@ export function ConversationHistoryList({ conversations }: { conversations: Conv
               {c.current_stage.replace('_', ' ')} · {c.status}
             </span>
           </button>
-          {expandedId === c.id && <TranscriptDetail conversationId={c.id} />}
+          {expandedId === c.id && <TranscriptDetail conversationId={c.id} businessId={businessId} />}
         </div>
       ))}
     </div>
   )
 }
 
-function TranscriptDetail({ conversationId }: { conversationId: number }) {
+function TranscriptDetail({ conversationId, businessId }: { conversationId: number; businessId: number }) {
   const { data, isLoading } = useQuery({
     queryKey: ['conversation-messages', conversationId],
-    queryFn: () => api.getConversationMessages(conversationId),
+    queryFn: () => api.getConversationMessages(conversationId, businessId),
   })
 
   if (isLoading) return <p className="px-4 pb-3 text-xs text-white/30">Loading transcript…</p>

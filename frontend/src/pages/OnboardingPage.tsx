@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/services/api'
-import { ACCENT } from '@/lib/palette'
+import { portalApi, portalAuth } from '@/services/portalApi'
+import { ACCENT, ACCENT_TEXT } from '@/lib/palette'
 import { INPUT_CLASS } from '@/lib/formStyles'
 import { DEFAULT_API_BASE } from '@/lib/config'
 import { Field } from '@/components/common/Field'
@@ -112,7 +113,7 @@ export function OnboardingPage() {
     setIngestWarning(null)
 
     try {
-      const { business, landing_page_slug: landingPageSlug } = await api.createBusiness({
+      const { business, landing_page_slug: landingPageSlug, token } = await api.createBusiness({
         slug: form.slug,
         email: form.email,
         password: form.password,
@@ -127,9 +128,15 @@ export function OnboardingPage() {
         allowed_origins: parseOrigins(form.embedOrigins),
       })
 
+      // Logged in immediately (same token a fresh /portal/login would
+      // issue) so the knowledge/ingest calls below go through the portal's
+      // already-authenticated endpoints instead of a separate, unscoped
+      // onboarding-only copy of the same logic.
+      portalAuth.setToken(token)
+
       const validKnowledgeItems = knowledgeItems.filter((item) => item.content.trim())
       if (validKnowledgeItems.length > 0) {
-        await api.addKnowledgeItems(business.id, validKnowledgeItems)
+        await portalApi.addKnowledge(validKnowledgeItems)
       }
 
       // Ingestion is best-effort — a client should still get their working
@@ -138,7 +145,7 @@ export function OnboardingPage() {
       let chunksIngested = 0
       if (validKnowledgeItems.length > 0 || form.websiteUrl.trim()) {
         try {
-          const ingestResult = await api.triggerIngestion(business.id, form.websiteUrl.trim() || undefined)
+          const ingestResult = await portalApi.triggerIngestion(form.websiteUrl.trim() || undefined)
           chunksIngested = ingestResult.chunks_ingested
         } catch (ingestErr) {
           setIngestWarning(
@@ -175,7 +182,7 @@ export function OnboardingPage() {
           <Link
             to={`/site/${result.landingPageSlug}`}
             className="mt-1 block text-sm font-semibold underline"
-            style={{ color: ACCENT }}
+            style={{ color: ACCENT_TEXT }}
           >
             /site/{result.landingPageSlug}
           </Link>
@@ -199,7 +206,7 @@ export function OnboardingPage() {
 <script src="${window.location.origin}/widget.js" defer></script>`}
           </pre>
         </div>
-        <Link to="/portal/login" className="mt-6 block text-sm font-semibold underline" style={{ color: ACCENT }}>
+        <Link to="/portal/login" className="mt-6 block text-sm font-semibold underline" style={{ color: ACCENT_TEXT }}>
           Go to your portal to manage this business →
         </Link>
         <button
@@ -371,7 +378,7 @@ export function OnboardingPage() {
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">Knowledge (optional)</h2>
-            <button type="button" onClick={addKnowledgeRow} className="text-xs font-semibold underline" style={{ color: ACCENT }}>
+            <button type="button" onClick={addKnowledgeRow} className="text-xs font-semibold underline" style={{ color: ACCENT_TEXT }}>
               + Add row
             </button>
           </div>

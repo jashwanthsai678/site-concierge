@@ -10,6 +10,7 @@ from app.config.settings import get_settings
 from app.database.session import async_session_factory
 from app.knowledge.interfaces import KnowledgeProvider
 from app.knowledge.rag_knowledge_provider import RagKnowledgeProvider
+from app.models.base import utcnow
 from app.models.business import Business
 from app.models.business_session import BusinessSession
 
@@ -40,6 +41,19 @@ async def get_current_business(
         await db.execute(select(BusinessSession).where(BusinessSession.token == token))
     ).scalar_one_or_none()
     if session is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired session.")
+
+    # Sessions used to never expire at all. SQLite doesn't preserve tzinfo
+    # across a round trip even with DateTime(timezone=True), so `expires_at`
+    # can come back naive here — normalize both sides to naive UTC for the
+    # comparison rather than assume the driver's behavior.
+    expires_at = session.expires_at
+    now = utcnow()
+    if expires_at.tzinfo is None:
+        now = now.replace(tzinfo=None)
+    if expires_at < now:
+        await db.delete(session)
+        await db.commit()
         raise HTTPException(status_code=401, detail="Invalid or expired session.")
 
     business = await db.get(Business, session.business_id)

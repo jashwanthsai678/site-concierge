@@ -27,9 +27,16 @@ async def list_conversations(
 
 
 @router.get("/{conversation_id}/messages", response_model=list[MessageRead])
-async def get_conversation_messages(conversation_id: int, db: AsyncSession = Depends(get_db)) -> list[MessageRead]:
+async def get_conversation_messages(
+    conversation_id: int, business_id: int = Query(...), db: AsyncSession = Depends(get_db),
+) -> list[MessageRead]:
+    """Same trust model list_conversations above already uses — a caller-
+    supplied business_id, accepted for this internal operator-only surface
+    (see README). Previously this took no business_id at all, letting any
+    caller read any business's full visitor transcript by guessing an id.
+    """
     conversation = await db.get(Conversation, conversation_id)
-    if conversation is None:
+    if conversation is None or conversation.business_id != business_id:
         raise HTTPException(status_code=404, detail="Conversation not found.")
 
     result = await db.execute(

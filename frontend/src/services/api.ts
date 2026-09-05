@@ -1,7 +1,7 @@
 import type { BusinessPublic, CampaignLandingPage, StartConversationResponse } from '@/types/business'
 import type { LeadRead } from '@/types/lead'
 import type { ConversationRead, DashboardSummary, FunnelCounts, MessageRead } from '@/types/analytics'
-import type { BusinessCreatePayload, BusinessOnboardingResponse, IngestResponse, KnowledgeItemPayload } from '@/types/onboarding'
+import type { BusinessCreatePayload, BusinessOnboardingResponse } from '@/types/onboarding'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -35,8 +35,8 @@ export const api = {
 
   listLeads: (businessId: number) => request<LeadRead[]>(`/api/leads?business_id=${businessId}`),
 
-  updateLeadStatus: (leadId: number, status: LeadRead['status']) =>
-    request<LeadRead>(`/api/leads/${leadId}/status`, {
+  updateLeadStatus: (leadId: number, businessId: number, status: LeadRead['status']) =>
+    request<LeadRead>(`/api/leads/${leadId}/status?business_id=${businessId}`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     }),
@@ -51,24 +51,12 @@ export const api = {
   listConversations: (businessId: number) =>
     request<ConversationRead[]>(`/api/conversations?business_id=${businessId}`),
 
-  getConversationMessages: (conversationId: number) =>
-    request<MessageRead[]>(`/api/conversations/${conversationId}/messages`),
+  getConversationMessages: (conversationId: number, businessId: number) =>
+    request<MessageRead[]>(`/api/conversations/${conversationId}/messages?business_id=${businessId}`),
 
   createBusiness: (payload: BusinessCreatePayload) =>
     request<BusinessOnboardingResponse>('/api/onboarding/businesses', {
       method: 'POST',
       body: JSON.stringify(payload),
-    }),
-
-  addKnowledgeItems: (businessId: number, items: KnowledgeItemPayload[]) =>
-    request<{ items_added: number }>(`/api/onboarding/businesses/${businessId}/knowledge`, {
-      method: 'POST',
-      body: JSON.stringify({ items }),
-    }),
-
-  triggerIngestion: (businessId: number, websiteUrl?: string) =>
-    request<IngestResponse>(`/api/onboarding/businesses/${businessId}/ingest`, {
-      method: 'POST',
-      body: JSON.stringify({ website_url: websiteUrl || null }),
     }),
 }

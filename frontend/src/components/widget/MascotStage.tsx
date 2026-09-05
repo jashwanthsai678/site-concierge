@@ -19,7 +19,9 @@ import type { TranscriptEntry } from '@/types/conversation'
 export function MascotStage({
   businessName,
   mascotKey,
+  customImageUrl,
   assetBase,
+  apiBase,
   connecting,
   orbState,
   transcript,
@@ -42,7 +44,9 @@ export function MascotStage({
 }: {
   businessName: string
   mascotKey: string
+  customImageUrl?: string | null
   assetBase?: string
+  apiBase?: string
   connecting: boolean
   orbState: VoiceOrbState
   transcript: TranscriptEntry[]
@@ -132,7 +136,9 @@ export function MascotStage({
         <AnimatedCharacter
           state={orbState}
           mascotKey={mascotKey}
+          customImageUrl={customImageUrl}
           assetBase={assetBase}
+          apiBase={apiBase}
           stageTier={stageTier}
           energy={energy}
         />

@@ -97,6 +97,7 @@ export function CompanyWebsiteLayout() {
           businessName={business.name}
           mascotKey={business.mascot_key}
           mascotEnergy={business.mascot_energy as MascotEnergy}
+          mascotImageUrl={business.mascot_image_url}
           onTopicMatch={handleTopicMatch}
         />
       </HighlightProvider>
@@ -114,6 +115,7 @@ function SiteConciergeWidget(props: {
   businessName: string
   mascotKey: string
   mascotEnergy: MascotEnergy
+  mascotImageUrl: string | null
   onTopicMatch: (topic: Topic) => void
 }) {
   const { trigger } = useHighlight()

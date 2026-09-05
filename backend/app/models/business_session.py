@@ -1,4 +1,6 @@
-from sqlalchemy import ForeignKey, String
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -17,3 +19,8 @@ class BusinessSession(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     business_id: Mapped[int] = mapped_column(ForeignKey("businesses.id"), index=True)
     token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    # Previously absent entirely — a token was valid forever until explicit
+    # logout. Set at issuance (auth.py's login, onboarding.py's
+    # create_business) to now + Settings.session_ttl_days; checked in
+    # api/deps.py::get_current_business.
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

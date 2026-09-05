@@ -11,7 +11,9 @@ seeded text standing in for it instead. A real client's marketing site is
 typically server-rendered/static HTML, which this handles.
 """
 
+import ipaddress
 import logging
+import socket
 from dataclasses import dataclass
 from urllib.parse import urljoin, urlparse
 
@@ -30,12 +32,39 @@ class CrawledPage:
     text: str
 
 
+def _is_public_host(hostname: str) -> bool:
+    """Rejects a hostname that resolves to a private/loopback/link-local/
+    reserved address — called on every URL before fetching it, not just the
+    caller-supplied starting URL, since a business's own site could
+    otherwise link into internal infrastructure. Not a complete SSRF fix on
+    its own: httpx's `follow_redirects=True` below doesn't re-run this
+    check on each redirect hop, so a same-host page that redirects to an
+    internal address after this check passes would still slip through — a
+    production hardening pass should validate each hop, not just the
+    request URL.
+    """
+    try:
+        addr_info = socket.getaddrinfo(hostname, None)
+    except socket.gaierror:
+        return False
+    for _family, _type, _proto, _canonname, sockaddr in addr_info:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+            return False
+    return True
+
+
 async def crawl_website(base_url: str, *, max_pages: int) -> list[CrawledPage]:
     """Breadth-first, same-domain crawl starting at `base_url`. Deliberately
     conservative (one request at a time, hard page cap, same-domain only,
-    HTML-only) since this hits a real client's live site, not a sandbox.
+    public-hosts-only, HTML-only) since this hits a real client's live
+    site, not a sandbox.
     """
     base_host = urlparse(base_url).netloc
+    if not _is_public_host(urlparse(base_url).hostname or ""):
+        logger.warning("Refusing to crawl %s: resolves to a non-public address.", base_url)
+        return []
+
     seen: set[str] = {base_url}
     queue: list[str] = [base_url]
     pages: list[CrawledPage] = []
@@ -43,6 +72,9 @@ async def crawl_website(base_url: str, *, max_pages: int) -> list[CrawledPage]:
     async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
         while queue and len(pages) < max_pages:
             url = queue.pop(0)
+            if not _is_public_host(urlparse(url).hostname or ""):
+                logger.warning("Skipping %s during crawl: resolves to a non-public address.", url)
+                continue
             try:
                 response = await client.get(url)
                 response.raise_for_status()

@@ -27,8 +27,5 @@ export interface BusinessCreatePayload {
 export interface BusinessOnboardingResponse {
   business: BusinessPublic
   landing_page_slug: string
-}
-
-export interface IngestResponse {
-  chunks_ingested: number
+  token: string
 }

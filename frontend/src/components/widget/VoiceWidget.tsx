@@ -6,6 +6,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis'
 import { useConversationSocket } from '@/hooks/useConversationSocket'
 import { WidgetBubble } from '@/components/widget/WidgetBubble'
+import { WidgetErrorCard } from '@/components/widget/WidgetErrorCard'
 import { WidgetPromptCard, type CommunicationMode } from '@/components/widget/WidgetPromptCard'
 import { MascotStage } from '@/components/widget/MascotStage'
 import type { VoiceOrbState } from '@/components/voice/AnimatedCharacter'
@@ -15,7 +16,7 @@ import { matchHighlightEntity } from '@/lib/highlightMatch'
 import type { MascotEnergy } from '@/lib/mascotRegistry'
 import { stepIndexForStage, suggestionForStage } from '@/lib/stageGuide'
 
-type WidgetState = 'collapsed' | 'prompting' | 'connecting' | 'active' | 'ended'
+type WidgetState = 'collapsed' | 'prompting' | 'connecting' | 'active' | 'ended' | 'start-failed'
 
 // How long the mascot holds its "pointing" pose after steering the visitor
 // to a page — purely the widget's own animation timing, independent of
@@ -52,6 +53,7 @@ export function VoiceWidget({
   businessName,
   mascotKey = 'default',
   mascotEnergy = 'balanced',
+  mascotImageUrl,
   apiBase,
   assetBase,
   onTopicMatch,
@@ -61,6 +63,7 @@ export function VoiceWidget({
   businessName: string
   mascotKey?: string
   mascotEnergy?: MascotEnergy
+  mascotImageUrl?: string | null
   apiBase?: string
   assetBase?: string
   onTopicMatch?: (topic: Topic) => void
@@ -72,6 +75,7 @@ export function VoiceWidget({
   const [isThinking, setIsThinking] = useState(false)
   const [isPointing, setIsPointing] = useState(false)
   const [endMessage, setEndMessage] = useState<string | null>(null)
+  const [startError, setStartError] = useState<string | null>(null)
   const [stage, setStage] = useState('greeting')
   const [showHistory, setShowHistory] = useState(false)
   // Chosen once, on the prompt card, before a conversation exists — gates
@@ -196,8 +200,12 @@ export function VoiceWidget({
       const res = apiBase ? await startEmbeddedConversation(apiBase, slug) : await api.startConversation(slug)
       setConversationId(res.conversation_id)
       setState('active')
-    } catch {
-      setState('collapsed')
+    } catch (err) {
+      // Previously collapsed silently here — a visitor who tapped "Talk"
+      // saw the widget just vanish with zero explanation of what happened
+      // or that anything happened at all.
+      setStartError(err instanceof Error ? err.message : "Couldn't connect — please try again.")
+      setState('start-failed')
     }
     // engagement is a stable ref-backed object from a hook with no reactive
     // deps that should retrigger this callback's identity.
@@ -287,7 +295,25 @@ export function VoiceWidget({
           : 'idle'
 
   if (state === 'collapsed') {
-    return <WidgetBubble mascotKey={mascotKey} assetBase={assetBase} onClick={handleBubbleClick} />
+    return (
+      <WidgetBubble
+        mascotKey={mascotKey}
+        customImageUrl={mascotImageUrl}
+        assetBase={assetBase}
+        apiBase={apiBase}
+        onClick={handleBubbleClick}
+      />
+    )
+  }
+
+  if (state === 'start-failed') {
+    return (
+      <WidgetErrorCard
+        message={startError ?? "Couldn't connect — please try again."}
+        onRetry={() => handleStart(mode)}
+        onDismiss={handleDismiss}
+      />
+    )
   }
 
   if (state === 'prompting') {
@@ -303,7 +329,9 @@ export function VoiceWidget({
     <MascotStage
       businessName={businessName}
       mascotKey={mascotKey}
+      customImageUrl={mascotImageUrl}
       assetBase={assetBase}
+      apiBase={apiBase}
       connecting={state === 'connecting'}
       orbState={orbState}
       transcript={transcript}

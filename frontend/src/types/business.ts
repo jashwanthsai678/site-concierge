@@ -7,6 +7,7 @@ export interface BusinessPublic {
   logo_url: string | null
   mascot_key: string
   mascot_energy: string
+  mascot_image_url: string | null
 }
 
 export interface CampaignLandingPage {

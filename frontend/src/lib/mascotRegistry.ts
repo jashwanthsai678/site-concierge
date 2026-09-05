@@ -32,6 +32,30 @@ export function mascotAssetsFor(mascotKey: string, assetBase = ''): MascotAssets
   }
 }
 
+/**
+ * Resolves what image(s) to actually render, preferring a business's own
+ * uploaded mascot image (backend/app/api/routers/portal.py's mascot-image
+ * endpoint) over the built-in registry when one is set. The uploaded file
+ * is served BY THE BACKEND (`/uploads/mascots/...`), not bundled into this
+ * frontend build like registry art is — so it resolves against `apiBase`
+ * (the same prop the widget already uses for its API calls), not
+ * `assetBase` (which only applies to this build's own bundled assets).
+ * One uploaded image stands in for both the full-body and bubble crops
+ * rather than requiring two separate uploads.
+ */
+export function resolveMascotAssets(
+  mascotKey: string,
+  customImageUrl: string | null | undefined,
+  assetBase = '',
+  apiBase = '',
+): MascotAssets {
+  if (customImageUrl) {
+    const url = apiBase + customImageUrl
+    return { fullbody: url, welcoming: url }
+  }
+  return mascotAssetsFor(mascotKey, assetBase)
+}
+
 /** Drives the portal's mascot picker — one entry per registered character.
  * Adding a second mascot later is: one new MASCOT_REGISTRY entry above +
  * one new entry here, no other code changes. */

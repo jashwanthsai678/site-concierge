@@ -23,6 +23,19 @@ class Settings(BaseSettings):
 
     conversation_idle_timeout_seconds: float = 90.0
     conversation_history_window: int = 8
+    # A visitor's message has no size limit at the WebSocket protocol level
+    # (ClientMessage.data is a bare dict) — without this, one oversized
+    # utterance becomes an uncapped prompt sent to the LLM twice per turn
+    # (reply + extraction), which is a real cost/abuse vector given the
+    # product's near-zero-marginal-cost pricing model depends on bounded
+    # per-turn token spend. 4000 chars is generously above anything a real
+    # typed/spoken question needs.
+    max_utterance_chars: int = 4000
+    # BusinessSession tokens used to never expire at all — a leaked/stolen
+    # token was valid forever until explicit logout. 30 days balances not
+    # forcing an owner to re-login constantly against bounding how long a
+    # leaked token stays useful.
+    session_ttl_days: int = 30
     # Only used by StaticKnowledgeProvider (the active provider whenever
     # Qdrant isn't configured — see api/deps.py).
     knowledge_context_char_budget: int = 2000

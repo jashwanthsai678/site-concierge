@@ -38,6 +38,11 @@ class Business(Base, TimestampMixin):
     # knob available without new art: it changes how the SAME image moves,
     # not what it looks like.
     mascot_energy: Mapped[str] = mapped_column(String(20), default="balanced")
+    # Set once a business uploads their own character art (see
+    # api/routers/portal.py's mascot-image endpoints) — takes priority over
+    # mascot_key's registry lookup on the frontend (lib/mascotRegistry.ts)
+    # whenever present. Null means "use the built-in registry character."
+    mascot_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
     # Exact scheme+host origins (e.g. "https://theirsite.com") this business
     # has registered to embed the widget on. Checked against the request's

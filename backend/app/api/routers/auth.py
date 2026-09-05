@@ -1,8 +1,13 @@
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
+from app.api.rate_limit import rate_limit_login
+from app.config.settings import get_settings
+from app.models.base import utcnow
 from app.models.business import Business
 from app.models.business_session import BusinessSession
 from app.schemas.business import BusinessPublic, LoginRequest, LoginResponse
@@ -12,7 +17,7 @@ from app.utils.security import verify_password
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post("/login", response_model=LoginResponse, dependencies=[Depends(rate_limit_login)])
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> LoginResponse:
     business = (
         await db.execute(select(Business).where(Business.email == payload.email))
@@ -27,7 +32,10 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
     ):
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
 
-    session = BusinessSession(business_id=business.id, token=new_session_token())
+    session = BusinessSession(
+        business_id=business.id, token=new_session_token(),
+        expires_at=utcnow() + timedelta(days=get_settings().session_ttl_days),
+    )
     db.add(session)
     await db.commit()
 

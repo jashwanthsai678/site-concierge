@@ -1,10 +1,15 @@
+from datetime import timedelta
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.api.routers import auth, onboarding, portal
+from app.models.base import utcnow
 from app.models.business import Business
+from app.models.business_session import BusinessSession
 from app.models.knowledge import KnowledgeCategory, KnowledgeItem
 from app.models.token_usage import TokenUsageLog
 from app.utils.security import hash_password
@@ -60,6 +65,17 @@ async def test_login_rejects_wrong_password(db_session: AsyncSession):
 
     response = client.post("/api/auth/login", json={"email": EMAIL, "password": "wrong-password"})
     assert response.status_code == 401
+
+
+async def test_login_is_rate_limited_after_repeated_attempts(db_session: AsyncSession):
+    await _seed_business(db_session)
+    client = _make_client(db_session)
+
+    for _ in range(5):  # rate_limit.py's _login_limiter: 5 attempts/window
+        client.post("/api/auth/login", json={"email": EMAIL, "password": "wrong-password"})
+
+    response = client.post("/api/auth/login", json={"email": EMAIL, "password": PASSWORD})
+    assert response.status_code == 429
 
 
 async def test_login_rejects_unknown_email(db_session: AsyncSession):
@@ -163,6 +179,93 @@ async def test_logout_invalidates_the_token(db_session: AsyncSession):
     assert client.get("/api/portal/me", headers=headers).status_code == 200
     assert client.post("/api/auth/logout", headers=headers).status_code == 204
     assert client.get("/api/portal/me", headers=headers).status_code == 401
+
+
+async def test_expired_session_is_rejected_and_cleaned_up(db_session: AsyncSession):
+    """Regression test: BusinessSession previously had no expiry at all — a
+    token was valid forever until explicit logout."""
+    await _seed_business(db_session)
+    client = _make_client(db_session)
+    token = await _login(client)
+
+    session = (
+        await db_session.execute(select(BusinessSession).where(BusinessSession.token == token))
+    ).scalar_one()
+    session.expires_at = utcnow() - timedelta(days=1)
+    await db_session.commit()
+
+    response = client.get("/api/portal/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 401
+
+    remaining = (
+        await db_session.execute(select(BusinessSession).where(BusinessSession.token == token))
+    ).scalar_one_or_none()
+    assert remaining is None
+
+
+async def test_mascot_image_upload_and_delete_round_trip(db_session: AsyncSession, tmp_path, monkeypatch):
+    import app.api.routers.portal as portal_module
+
+    monkeypatch.setattr(portal_module, "_UPLOADS_DIR", tmp_path / "mascots")
+
+    await _seed_business(db_session)
+    client = _make_client(db_session)
+    token = await _login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    upload_response = client.post(
+        "/api/portal/mascot-image", headers=headers,
+        files={"file": ("mascot.png", b"\x89PNG\r\n\x1a\nfake-but-nonempty", "image/png")},
+    )
+    assert upload_response.status_code == 200
+    body = upload_response.json()
+    assert body["mascot_image_url"] is not None
+    saved_files = list((tmp_path / "mascots").glob("*"))
+    assert len(saved_files) == 1
+
+    delete_response = client.delete("/api/portal/mascot-image", headers=headers)
+    assert delete_response.status_code == 200
+    assert delete_response.json()["mascot_image_url"] is None
+    assert list((tmp_path / "mascots").glob("*")) == []
+
+
+async def test_mascot_image_upload_rejects_non_image_content_type(db_session: AsyncSession, tmp_path, monkeypatch):
+    import app.api.routers.portal as portal_module
+
+    monkeypatch.setattr(portal_module, "_UPLOADS_DIR", tmp_path / "mascots")
+
+    await _seed_business(db_session)
+    client = _make_client(db_session)
+    token = await _login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/portal/mascot-image", headers=headers,
+        files={"file": ("script.js", b"alert(1)", "application/javascript")},
+    )
+    assert response.status_code == 400
+
+
+async def test_mascot_image_upload_rejects_spoofed_content_type(db_session: AsyncSession, tmp_path, monkeypatch):
+    """Regression test: the upload used to trust the client-supplied
+    Content-Type header alone — a non-image file claiming to be image/png
+    would be accepted and stored under a .png extension, served publicly.
+    """
+    import app.api.routers.portal as portal_module
+
+    monkeypatch.setattr(portal_module, "_UPLOADS_DIR", tmp_path / "mascots")
+
+    await _seed_business(db_session)
+    client = _make_client(db_session)
+    token = await _login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/portal/mascot-image", headers=headers,
+        files={"file": ("fake.png", b"<script>alert(1)</script>", "image/png")},
+    )
+    assert response.status_code == 400
+    assert list((tmp_path / "mascots").glob("*")) == []
 
 
 async def test_usage_summary_sums_by_call_type_and_flags_estimates(db_session: AsyncSession):

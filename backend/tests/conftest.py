@@ -43,6 +43,21 @@ def fake_llm_client() -> FakeLLMClient:
     return FakeLLMClient()
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limiters():
+    """rate_limit.py's limiters are process-global singletons (by design —
+    they need to track attempts across requests, not per-test-client
+    instances) — without this, tests that legitimately call /api/auth/login
+    or /api/onboarding/businesses more than a handful of times across the
+    whole suite start tripping the same limiter a real attacker would.
+    """
+    from app.api.rate_limit import _login_limiter, _signup_limiter
+
+    _login_limiter._hits.clear()
+    _signup_limiter._hits.clear()
+    yield
+
+
 @pytest_asyncio.fixture
 async def db_session() -> AsyncIterator[AsyncSession]:
     # In-memory SQLite, StaticPool so the single connection (and its

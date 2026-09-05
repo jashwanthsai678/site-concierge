@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import { VoiceWidget } from '@/components/widget/VoiceWidget'
 import { getWidgetConfig } from '@/services/widgetApi'
+import type { MascotEnergy } from '@/lib/mascotRegistry'
 import widgetCss from '@/index.css?inline'
 
 declare global {
@@ -69,6 +70,8 @@ async function mount() {
       slug={config.slug}
       businessName={business.name}
       mascotKey={business.mascot_key}
+      mascotEnergy={business.mascot_energy as MascotEnergy}
+      mascotImageUrl={business.mascot_image_url}
       apiBase={apiBase}
       assetBase={SCRIPT_ORIGIN}
     />,

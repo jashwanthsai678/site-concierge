@@ -16,6 +16,10 @@ export default defineConfig({
     proxy: {
       '/api': { target: 'http://localhost:8010', changeOrigin: true },
       '/ws': { target: 'ws://localhost:8010', ws: true },
+      // Uploaded mascot images (see backend api/routers/portal.py) are
+      // served by the backend, not bundled into this frontend build like
+      // the built-in registry mascot art under public/mascot/ is.
+      '/uploads': { target: 'http://localhost:8010', changeOrigin: true },
     },
   },
 })

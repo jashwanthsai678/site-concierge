@@ -20,9 +20,13 @@ export const portalAuth = {
 
 async function portalRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const token = portalAuth.getToken()
+  // FormData (file uploads) must NOT get an explicit Content-Type — the
+  // browser sets its own multipart boundary, which a manual header would
+  // override and break.
+  const isFormData = init?.body instanceof FormData
   const res = await fetch(path, {
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
@@ -80,4 +84,12 @@ export const portalApi = {
     }),
 
   listLeads: () => portalRequest<LeadRead[]>('/api/portal/leads'),
+
+  uploadMascotImage: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return portalRequest<PortalBusinessRead>('/api/portal/mascot-image', { method: 'POST', body: formData })
+  },
+
+  removeMascotImage: () => portalRequest<PortalBusinessRead>('/api/portal/mascot-image', { method: 'DELETE' }),
 }

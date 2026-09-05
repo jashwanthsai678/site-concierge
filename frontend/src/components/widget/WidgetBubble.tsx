@@ -1,19 +1,23 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ACCENT } from '@/lib/palette'
-import { mascotAssetsFor } from '@/lib/mascotRegistry'
+import { resolveMascotAssets } from '@/lib/mascotRegistry'
 
 export function WidgetBubble({
   mascotKey = 'default',
+  customImageUrl,
   assetBase = '',
+  apiBase = '',
   onClick,
 }: {
   mascotKey?: string
+  customImageUrl?: string | null
   assetBase?: string
+  apiBase?: string
   onClick: () => void
 }) {
   const [imageFailed, setImageFailed] = useState(false)
-  const { welcoming } = mascotAssetsFor(mascotKey, assetBase)
+  const { welcoming } = resolveMascotAssets(mascotKey, customImageUrl, assetBase, apiBase)
 
   return (
     <motion.button

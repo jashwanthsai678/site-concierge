@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 
+// Mirrors backend Settings.max_utterance_chars (app/config/settings.py) —
+// this is the UX-side prevention (can't even type past it); the server
+// enforcement is what actually matters since this is trivially bypassable
+// by anyone not using this UI.
+const MAX_UTTERANCE_CHARS = 4000
+
 /**
  * The non-voice path — a visitor who can't or doesn't want to talk (quiet
  * room, phone on silent, no mic permission, or just switched the mode
@@ -44,6 +50,7 @@ export function TextInputBar({
         value={value}
         onChange={(event) => setValue(event.target.value)}
         disabled={disabled}
+        maxLength={MAX_UTTERANCE_CHARS}
         placeholder="Or type your message…"
         aria-label="Type a message"
         className="min-w-0 flex-1 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 shadow-sm placeholder:text-gray-400 disabled:opacity-40"

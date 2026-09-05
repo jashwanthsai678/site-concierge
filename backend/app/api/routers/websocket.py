@@ -86,6 +86,17 @@ async def conversation_ws(websocket: WebSocket, conversation_id: int) -> None:
             if not utterance:
                 continue
 
+            max_chars = get_settings().max_utterance_chars
+            if len(utterance) > max_chars:
+                await connection_manager.send_to_conversation(
+                    conversation_id, ServerEventType.ERROR,
+                    {
+                        "code": "utterance_too_long",
+                        "message": f"That message is too long (max {max_chars} characters) — could you shorten it?",
+                    },
+                )
+                continue
+
             await _handle_turn(conversation_id, utterance)
 
     except WebSocketDisconnect:
@@ -124,6 +135,18 @@ async def _handle_turn(conversation_id: int, utterance: str) -> None:
 
 @router.websocket("/ws/dashboard")
 async def dashboard_ws(websocket: WebSocket) -> None:
+    # This is the operator-facing dashboard (not the client portal), meant
+    # to be opened from this app's own frontend only — it fans out every
+    # business's live lead updates (name/phone/email/budget/etc.), so it
+    # must NOT accept a connection claiming to come from an arbitrary
+    # origin. This checks the same trusted-origin list the app-wide static
+    # CORSMiddleware uses for everything else, since this socket isn't
+    # per-business the way the widget/conversation origin check is.
+    origin = websocket.headers.get("origin")
+    if origin not in get_settings().cors_origins:
+        await websocket.close(code=4403)
+        return
+
     await connection_manager.connect_dashboard(websocket)
     try:
         while True:

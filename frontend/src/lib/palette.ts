@@ -20,6 +20,11 @@ export const FUNNEL_RAMP = ['#86b6ef', '#5598e7', '#2a78d6', '#184f95'] as const
 
 export const ACCENT = '#3987e5'
 export const ACCENT_STRONG = '#2a78d6'
+// ACCENT measures ~4.4:1 against white — just under the 4.5:1 WCAG AA
+// minimum for normal-size text. Fine for backgrounds/borders/large text
+// (which only need 3:1), but small text/links on a white background
+// should use this darker shade instead — verified ~6.8:1.
+export const ACCENT_TEXT = '#1d4ed8'
 
 // Fixed 8-hue categorical order — never cycle/reassign per series.
 export const CATEGORICAL = [

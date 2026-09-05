@@ -9,6 +9,17 @@ import { GlassCard } from '@/components/common/GlassCard'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import type { LeadRead } from '@/types/lead'
 
+function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="mb-4 flex items-center justify-between rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
+      <span>{message}</span>
+      <button type="button" onClick={() => onRetry()} className="font-semibold underline">
+        Retry
+      </button>
+    </div>
+  )
+}
+
 function formatSeconds(seconds: number | null): string {
   if (seconds === null) return '—'
   const minutes = Math.floor(seconds / 60)
@@ -22,7 +33,7 @@ export function DashboardPage() {
   const businessQuery = useQuery({ queryKey: ['current-business'], queryFn: api.getCurrentBusiness })
   const businessId = businessQuery.data?.id ?? null
 
-  useDashboardSocket(businessId)
+  const { connected: liveUpdatesConnected } = useDashboardSocket(businessId)
 
   const summaryQuery = useQuery({
     queryKey: ['analytics-summary', businessId],
@@ -46,7 +57,8 @@ export function DashboardPage() {
   })
 
   const handleStatusChange = async (leadId: number, status: LeadRead['status']) => {
-    await api.updateLeadStatus(leadId, status)
+    if (businessId === null) return
+    await api.updateLeadStatus(leadId, businessId, status)
     void queryClient.invalidateQueries({ queryKey: ['leads', businessId] })
     void queryClient.invalidateQueries({ queryKey: ['analytics-pipeline', businessId] })
   }
@@ -80,19 +92,33 @@ export function DashboardPage() {
             <h1 className="text-2xl font-bold">{businessQuery.data.name}</h1>
             <p className="text-sm text-white/50">Site Concierge — live dashboard</p>
           </div>
+          <div className="flex items-center gap-1.5 text-xs text-white/50">
+            <span
+              className={`h-2 w-2 rounded-full ${liveUpdatesConnected ? 'bg-green-400' : 'bg-amber-400'}`}
+              aria-hidden="true"
+            />
+            {liveUpdatesConnected ? 'Live' : 'Reconnecting…'}
+          </div>
         </div>
 
+        {summaryQuery.isError && <ErrorBanner message="Couldn't load today's stats." onRetry={summaryQuery.refetch} />}
         <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatTile label="Today's Visitors" value={String(summary?.visitors_today ?? '—')} />
-          <StatTile label="Today's Conversations" value={String(summary?.conversations_today ?? '—')} />
-          <StatTile label="Qualified Leads" value={String(summary?.qualified_leads_today ?? '—')} />
-          <StatTile label="Booked Meetings" value={String(summary?.booked_meetings_today ?? '—')} />
+          <StatTile label="Today's Visitors" value={summaryQuery.isLoading ? '…' : String(summary?.visitors_today ?? '—')} />
+          <StatTile label="Today's Conversations" value={summaryQuery.isLoading ? '…' : String(summary?.conversations_today ?? '—')} />
+          <StatTile label="Qualified Leads" value={summaryQuery.isLoading ? '…' : String(summary?.qualified_leads_today ?? '—')} />
+          <StatTile label="Booked Meetings" value={summaryQuery.isLoading ? '…' : String(summary?.booked_meetings_today ?? '—')} />
         </div>
 
         <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
           <GlassCard className="p-6 lg:col-span-2">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-white/50">Conversion Funnel</h2>
-            {funnel ? <ConversionFunnelChart funnel={funnel} /> : <LoadingSpinner />}
+            {funnelQuery.isError ? (
+              <ErrorBanner message="Couldn't load the funnel." onRetry={funnelQuery.refetch} />
+            ) : funnel ? (
+              <ConversionFunnelChart funnel={funnel} />
+            ) : (
+              <LoadingSpinner />
+            )}
           </GlassCard>
           <GlassCard className="p-6">
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-white/50">
@@ -106,12 +132,24 @@ export function DashboardPage() {
 
         <div className="mb-8">
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-white/50">Lead Pipeline</h2>
-          <LeadPipeline leads={leads} onStatusChange={handleStatusChange} />
+          {leadsQuery.isLoading ? (
+            <LoadingSpinner />
+          ) : leadsQuery.isError ? (
+            <ErrorBanner message="Couldn't load leads." onRetry={leadsQuery.refetch} />
+          ) : (
+            <LeadPipeline leads={leads} onStatusChange={handleStatusChange} />
+          )}
         </div>
 
         <div>
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-white/50">Conversation History</h2>
-          <ConversationHistoryList conversations={conversations} />
+          {conversationsQuery.isLoading ? (
+            <LoadingSpinner />
+          ) : conversationsQuery.isError ? (
+            <ErrorBanner message="Couldn't load conversation history." onRetry={conversationsQuery.refetch} />
+          ) : (
+            <ConversationHistoryList conversations={conversations} businessId={businessId as number} />
+          )}
         </div>
       </div>
     </div>

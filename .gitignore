@@ -15,6 +15,9 @@ backend/.env
 *.db-wal
 *.db-shm
 
+# User-uploaded content (mascot images, etc.) — runtime data, not source
+backend/uploads/
+
 # Node (frontend has its own too, this covers root-level tooling)
 node_modules/
 

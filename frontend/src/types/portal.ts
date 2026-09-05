@@ -27,6 +27,7 @@ export interface PortalBusinessRead {
   logo_url: string | null
   mascot_key: string
   mascot_energy: string
+  mascot_image_url: string | null
   allowed_origins: string[]
 }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { mascotAssetsFor, type MascotEnergy } from '@/lib/mascotRegistry'
+import { resolveMascotAssets, type MascotEnergy } from '@/lib/mascotRegistry'
 
 export type VoiceOrbState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'pointing'
 
@@ -69,14 +69,18 @@ function animationFor(state: VoiceOrbState, stageTier: number): { animate: Recor
 export function AnimatedCharacter({
   state,
   mascotKey = 'default',
+  customImageUrl,
   assetBase = '',
+  apiBase = '',
   compact = false,
   stageTier = 0,
   energy = 'balanced',
 }: {
   state: VoiceOrbState
   mascotKey?: string
+  customImageUrl?: string | null
   assetBase?: string
+  apiBase?: string
   compact?: boolean
   stageTier?: number
   energy?: MascotEnergy
@@ -87,7 +91,7 @@ export function AnimatedCharacter({
   const { amplitude, speed } = ENERGY_FACTOR[energy] ?? ENERGY_FACTOR.balanced
   const animate = scaleAnimation(base.animate, amplitude)
   const duration = base.duration / speed
-  const { fullbody } = mascotAssetsFor(mascotKey, assetBase)
+  const { fullbody } = resolveMascotAssets(mascotKey, customImageUrl, assetBase, apiBase)
 
   return (
     <div className="flex flex-col items-center">
@@ -102,7 +106,10 @@ export function AnimatedCharacter({
           <img
             src={fullbody}
             alt=""
-            className="h-full w-full object-contain object-bottom drop-shadow-xl"
+            // A custom upload isn't guaranteed to be a full-body figure with
+            // feet at the bottom the way the built-in character art is —
+            // center it instead of anchoring to the bottom edge.
+            className={`h-full w-full drop-shadow-xl ${customImageUrl ? 'object-contain object-center' : 'object-contain object-bottom'}`}
             onError={() => setFailed(true)}
           />
         )}

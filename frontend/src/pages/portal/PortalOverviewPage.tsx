@@ -1,9 +1,11 @@
 import { useOutletContext, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { portalApi } from '@/services/portalApi'
-import { ACCENT } from '@/lib/palette'
+import { ACCENT, ACCENT_TEXT } from '@/lib/palette'
 import { AnimatedCharacter } from '@/components/voice/AnimatedCharacter'
 import { SpeechBubble } from '@/components/voice/SpeechBubble'
+import { PortalCard, PortalPageHeader, PreviewFrame } from '@/components/portal/PortalUI'
+import { CheckIcon } from '@/components/portal/icons'
 import type { MascotEnergy } from '@/lib/mascotRegistry'
 import type { PortalContext } from '@/pages/portal/PortalLayout'
 
@@ -30,67 +32,107 @@ export function PortalOverviewPage() {
     { label: 'Copy the embed snippet onto your site', done: false, to: '/portal/embed', cta: 'Get snippet' },
   ]
   const doneCount = checklist.filter((c) => c.done).length
+  const progressPct = Math.round((doneCount / checklist.length) * 100)
+
+  const loadFailed = knowledgeQuery.isError || leadsQuery.isError
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Overview</h1>
-        <p className="mt-1 text-sm text-gray-500">Welcome back, {business.name}.</p>
+      <PortalPageHeader title="Overview" description={`Welcome back, ${business.name}.`} />
+
+      {loadFailed && (
+        <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-600">
+          <span>Some of this page couldn't load — the numbers below may be incomplete.</span>
+          <button
+            type="button"
+            onClick={() => {
+              void knowledgeQuery.refetch()
+              void leadsQuery.refetch()
+            }}
+            className="font-semibold underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <StatCard
+          label="Knowledge rows"
+          value={knowledgeQuery.data?.length ?? 0}
+          loading={knowledgeQuery.isLoading}
+          error={knowledgeQuery.isError}
+        />
+        <StatCard
+          label="Leads captured"
+          value={leadsQuery.data?.length ?? 0}
+          loading={leadsQuery.isLoading}
+          error={leadsQuery.isError}
+        />
+        <StatCard
+          label="Hot leads"
+          value={leadsQuery.data?.filter((l) => l.category === 'Hot').length ?? 0}
+          loading={leadsQuery.isLoading}
+          error={leadsQuery.isError}
+          accent="#d03b3b"
+        />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_260px]">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
+        <PortalCard>
+          <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">Setup checklist</h2>
-            <span className="text-xs text-gray-400">{doneCount} of {checklist.length} done</span>
+            <span className="text-xs font-medium text-gray-400">{doneCount} of {checklist.length} done</span>
           </div>
-          {checklist.map((item) => (
-            <Link
-              key={item.label}
-              to={item.to}
-              className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 hover:border-gray-300"
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs text-white"
-                  style={{ backgroundColor: item.done ? '#22c55e' : '#d1d5db' }}
-                >
-                  {item.done ? '✓' : ''}
-                </span>
-                <span className={`text-sm ${item.done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
-                  {item.label}
-                </span>
-              </div>
-              {!item.done && (
-                <span className="text-xs font-semibold" style={{ color: ACCENT }}>
-                  {item.cta} →
-                </span>
-              )}
-            </Link>
-          ))}
 
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <StatTile label="Knowledge rows" value={knowledgeQuery.data?.length ?? 0} />
-            <StatTile label="Leads captured" value={leadsQuery.data?.length ?? 0} />
-            <StatTile
-              label="Hot leads"
-              value={leadsQuery.data?.filter((l) => l.category === 'Hot').length ?? 0}
+          <div className="mb-5 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{ width: `${progressPct}%`, backgroundColor: ACCENT }}
             />
           </div>
-        </div>
+
+          <div className="space-y-1">
+            {checklist.map((item) => (
+              <Link
+                key={item.label}
+                to={item.to}
+                className="flex items-center justify-between rounded-lg px-2 py-2.5 hover:bg-gray-50"
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                    style={{ backgroundColor: item.done ? '#22c55e' : '#e5e7eb' }}
+                  >
+                    {item.done && <CheckIcon className="h-3 w-3 text-white" />}
+                  </span>
+                  <span className={`text-sm ${item.done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                    {item.label}
+                  </span>
+                </div>
+                {!item.done && (
+                  <span className="shrink-0 text-xs font-semibold" style={{ color: ACCENT_TEXT }}>
+                    {item.cta} →
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        </PortalCard>
 
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Your bot right now</p>
-          <div className="flex h-64 flex-col items-center justify-end gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
+          <PreviewFrame label={business.name}>
             <SpeechBubble text={business.greeting_template} />
             <AnimatedCharacter
               state="idle"
               mascotKey={business.mascot_key}
+              customImageUrl={business.mascot_image_url}
               energy={business.mascot_energy as MascotEnergy}
               compact
             />
-          </div>
-          <Link to="/portal/bot-setup" className="mt-2 block text-center text-xs font-semibold" style={{ color: ACCENT }}>
+          </PreviewFrame>
+          <Link to="/portal/bot-setup" className="mt-2 block text-center text-xs font-semibold" style={{ color: ACCENT_TEXT }}>
             Edit bot setup →
           </Link>
         </div>
@@ -99,11 +141,28 @@ export function PortalOverviewPage() {
   )
 }
 
-function StatTile({ label, value }: { label: string; value: number }) {
+function StatCard({
+  label,
+  value,
+  accent = ACCENT,
+  loading,
+  error,
+}: {
+  label: string
+  value: number
+  accent?: string
+  loading?: boolean
+  error?: boolean
+}) {
   return (
-    <div className="rounded-lg border border-gray-100 p-3">
-      <p className="text-lg font-bold text-gray-900">{value}</p>
-      <p className="text-[11px] text-gray-500">{label}</p>
-    </div>
+    <PortalCard className="p-5">
+      <p
+        className="text-3xl font-bold"
+        style={{ color: error ? '#9ca3af' : accent, fontVariantNumeric: 'tabular-nums' }}
+      >
+        {error ? '—' : loading ? '…' : value}
+      </p>
+      <p className="mt-1 text-xs font-medium text-gray-500">{label}</p>
+    </PortalCard>
   )
 }

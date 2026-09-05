@@ -14,6 +14,7 @@ class BusinessPublic(BaseModel):
     logo_url: str | None
     mascot_key: str
     mascot_energy: str
+    mascot_image_url: str | None
 
 
 class PortalBusinessRead(BaseModel):
@@ -37,6 +38,7 @@ class PortalBusinessRead(BaseModel):
     logo_url: str | None
     mascot_key: str
     mascot_energy: str
+    mascot_image_url: str | None
     allowed_origins: list[str]
 
 
@@ -84,6 +86,11 @@ class BusinessCreate(BaseModel):
 class BusinessOnboardingResponse(BaseModel):
     business: BusinessPublic
     landing_page_slug: str
+    # Issued immediately on creation (same as a fresh /api/auth/login) so the
+    # frontend can make authenticated follow-up calls — e.g. POST
+    # /api/portal/knowledge, POST /api/portal/ingest — without a second
+    # round trip that re-sends the password.
+    token: str
 
 
 class KnowledgeItemCreate(BaseModel):
