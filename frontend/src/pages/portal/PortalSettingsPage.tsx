@@ -14,10 +14,8 @@ export function PortalSettingsPage() {
   const { business, refetchBusiness } = useOutletContext<PortalContext>()
   const [name, setName] = useState(business.name)
   const [industry, setIndustry] = useState(business.industry)
-  const [personaDescription, setPersonaDescription] = useState('')
-  const [greetingTemplate, setGreetingTemplate] = useState('')
   const [brandingColor, setBrandingColor] = useState(business.branding_color)
-  const [embedOrigins, setEmbedOrigins] = useState('')
+  const [embedOrigins, setEmbedOrigins] = useState(business.allowed_origins.join('\n'))
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
 
@@ -29,10 +27,8 @@ export function PortalSettingsPage() {
       await portalApi.updateMe({
         name,
         industry,
-        persona_description: personaDescription || undefined,
-        greeting_template: greetingTemplate || undefined,
         branding_color: brandingColor,
-        allowed_origins: embedOrigins.trim() ? parseOrigins(embedOrigins) : undefined,
+        allowed_origins: parseOrigins(embedOrigins),
       })
       refetchBusiness()
       setStatus('saved')
@@ -45,10 +41,10 @@ export function PortalSettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">Business settings</h1>
+        <h1 className="text-xl font-bold text-gray-900">Settings</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Persona and greeting fields are left blank below on purpose — leave them empty to keep what's already
-          configured, or type a new value to replace it.
+          Business identity and where your widget is allowed to run. Looking for persona, greeting, or mascot? Head
+          to Bot Setup.
         </p>
       </div>
 
@@ -67,30 +63,12 @@ export function PortalSettingsPage() {
             className="h-10 w-16 rounded border border-gray-300"
           />
         </Field>
-        <Field label="Persona description" hint="Leave blank to keep the current one">
-          <textarea
-            rows={3}
-            value={personaDescription}
-            onChange={(e) => setPersonaDescription(e.target.value)}
-            className={INPUT_CLASS}
-            placeholder="You are Maya, a friendly and knowledgeable fitness consultant..."
-          />
-        </Field>
-        <Field label="Greeting" hint="Leave blank to keep the current one">
-          <textarea
-            rows={2}
-            value={greetingTemplate}
-            onChange={(e) => setGreetingTemplate(e.target.value)}
-            className={INPUT_CLASS}
-            placeholder="Hi, I'm Maya from Acme Fitness Studio..."
-          />
-        </Field>
         <Field
           label="Allowed embed origins"
-          hint="One per line. Leave blank to keep what's registered — this replaces the whole list, it doesn't add to it."
+          hint="One per line — exact scheme + host (e.g. https://theirsite.com) the widget is allowed to run from."
         >
           <textarea
-            rows={2}
+            rows={3}
             value={embedOrigins}
             onChange={(e) => setEmbedOrigins(e.target.value)}
             className={INPUT_CLASS}

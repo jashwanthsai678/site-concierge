@@ -7,10 +7,10 @@ services:
       # by host port conflicts; matches the local-dev port in run-dev.ps1).
       - "8010:8000"
     environment:
-      # TokenRouter is a hosted API — no host-network passthrough needed.
-      TOKEN_ROUTER_BASE_URL: "https://api.tokenrouter.com/v1"
-      TOKEN_ROUTER_API_KEY: "${TOKEN_ROUTER_API_KEY}"
-      TOKEN_ROUTER_MODEL: "qwen/qwen3.8-max-free"
+      # Groq is a hosted API — no host-network passthrough needed.
+      GROQ_BASE_URL: "https://api.groq.com/openai/v1"
+      GROQ_API_KEY: "${GROQ_API_KEY}"
+      GROQ_MODEL: "openai/gpt-oss-20b"
       DATABASE_URL: "sqlite+aiosqlite:////data/ai_conversion_os.db"
       CORS_ORIGINS: '["http://localhost:8080"]'
     volumes:

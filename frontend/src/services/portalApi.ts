@@ -1,6 +1,12 @@
-import type { BusinessPublic } from '@/types/business'
 import type { KnowledgeItemPayload } from '@/types/onboarding'
-import type { KnowledgeItemRead, KnowledgeItemUpdate, LoginRequest, LoginResponse, PortalBusinessUpdate } from '@/types/portal'
+import type {
+  KnowledgeItemRead,
+  KnowledgeItemUpdate,
+  LoginRequest,
+  LoginResponse,
+  PortalBusinessRead,
+  PortalBusinessUpdate,
+} from '@/types/portal'
 import type { LeadRead } from '@/types/lead'
 
 const TOKEN_KEY = 'site-concierge-portal-token'
@@ -45,10 +51,10 @@ export const portalApi = {
 
   logout: () => portalRequest<void>('/api/auth/logout', { method: 'POST' }),
 
-  getMe: () => portalRequest<BusinessPublic>('/api/portal/me'),
+  getMe: () => portalRequest<PortalBusinessRead>('/api/portal/me'),
 
   updateMe: (payload: PortalBusinessUpdate) =>
-    portalRequest<BusinessPublic>('/api/portal/me', { method: 'PATCH', body: JSON.stringify(payload) }),
+    portalRequest<PortalBusinessRead>('/api/portal/me', { method: 'PATCH', body: JSON.stringify(payload) }),
 
   listKnowledge: () => portalRequest<KnowledgeItemRead[]>('/api/portal/knowledge'),
 

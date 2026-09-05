@@ -35,9 +35,25 @@ class RagKnowledgeProvider:
         if not results:
             return _NO_CONTEXT
 
-        lines = []
+        # Qdrant already returns `results` ranked best-match-first — capping
+        # by accumulating in that order (stopping once the budget is hit,
+        # rather than joining everything then hard-truncating the string)
+        # means a low-relevance chunk is what gets dropped when a business
+        # has enough content to exceed the budget, never a high-relevance
+        # one cut off mid-sentence. This budget also bounds how many tokens
+        # a single turn's reply-generation call spends on knowledge context
+        # at all — with no cap here, `rag_top_k` chunks at up to
+        # `rag_chunk_chars` each could grow the prompt enough on its own to
+        # meaningfully eat into a low free-tier tokens-per-minute ceiling.
+        budget = get_settings().knowledge_context_char_budget
+        lines: list[str] = []
+        used = 0
         for result in results:
             source = result.get("source", "knowledge")
             location = f" ({result['url']})" if result.get("url") else ""
-            lines.append(f"[{source}]{location} {result['text']}")
+            line = f"[{source}]{location} {result['text']}"
+            if used + len(line) > budget and lines:
+                break
+            lines.append(line)
+            used += len(line)
         return "\n".join(lines)

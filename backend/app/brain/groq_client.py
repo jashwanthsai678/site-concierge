@@ -10,13 +10,27 @@ from app.config.settings import Settings
 
 logger = logging.getLogger(__name__)
 
-# Measured empirically against the free tier (qwen/qwen3.8-max-free): ~15-25%
-# of calls fail with a transient 5xx or connection error under normal use.
-# Retried here, not left to the caller, since every caller would otherwise
-# need to reimplement the same retry/backoff policy.
+# Groq occasionally returns a transient 5xx under load, same as any hosted
+# inference API — retried here, not left to the caller, since every caller
+# would otherwise need to reimplement the same retry/backoff policy.
 _MAX_ATTEMPTS = 3
 _RETRY_BACKOFF_SECONDS = 0.5
 _RETRYABLE_STATUS_CODES = {500, 502, 503, 504}
+
+# Reasoning models (the gpt-oss family on Groq's free tier) spend tokens on
+# hidden chain-of-thought before ever producing visible content — measured
+# live against this account: an unconstrained call to a plain "hi" burned
+# 20-100+ reasoning tokens on top of the actual reply, none of which the
+# visitor ever sees. "low" cut that to single digits in the same test with
+# no loss of reply quality, and it's the single biggest lever against this
+# account's 8,000-tokens/minute free-tier cap (a turn fires two concurrent
+# calls — reply + extraction — so burning tokens on invisible reasoning
+# doubles the damage). `max_tokens` is a second, independent lever: nothing
+# here ever needs more than a short sales reply or a small JSON object, but
+# without a cap a reasoning model is free to run arbitrarily long and can
+# exhaust the same per-minute budget on a single unlucky turn.
+_REASONING_EFFORT = "low"
+_MAX_COMPLETION_TOKENS = 400
 
 
 def _is_retryable(exc: Exception) -> bool:
@@ -27,21 +41,21 @@ def _is_retryable(exc: Exception) -> bool:
     return isinstance(exc, httpx.TransportError)
 
 
-class TokenRouterClient(LLMClient):
-    """Async wrapper around TokenRouter's OpenAI-compatible /chat/completions
-    endpoint (https://api.tokenrouter.com/v1) — a hosted router to free/open
-    models, used here in place of a locally-run Ollama model. Speaks the
-    same request/response shape OpenAI's SDK uses, so the wire format below
-    (messages array, `response_format` for JSON mode, SSE `data: ...` lines
-    for streaming) is the OpenAI Chat Completions spec, not anything
-    TokenRouter-specific.
+class GroqClient(LLMClient):
+    """Async wrapper around Groq's OpenAI-compatible /chat/completions
+    endpoint (https://api.groq.com/openai/v1) — used via plain httpx rather
+    than the official `groq` SDK so this stays a thin implementation of
+    LLMClient like every other provider, with no extra dependency. The wire
+    format below (messages array, `response_format` for JSON mode, SSE
+    `data: ...` lines for streaming) is the standard OpenAI Chat Completions
+    spec, which is exactly what Groq speaks.
     """
 
     def __init__(self, settings: Settings):
-        self._base_url = settings.token_router_base_url.rstrip("/")
-        self._api_key = settings.token_router_api_key
-        self._model = settings.token_router_model
-        self._timeout = settings.token_router_request_timeout_seconds
+        self._base_url = settings.groq_base_url.rstrip("/")
+        self._api_key = settings.groq_api_key
+        self._model = settings.groq_model
+        self._timeout = settings.groq_request_timeout_seconds
 
     def _headers(self) -> dict:
         return {
@@ -54,6 +68,8 @@ class TokenRouterClient(LLMClient):
             "model": self._model,
             "messages": messages,
             "stream": False,
+            "reasoning_effort": _REASONING_EFFORT,
+            "max_completion_tokens": _MAX_COMPLETION_TOKENS,
         }
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
@@ -73,7 +89,7 @@ class TokenRouterClient(LLMClient):
                 if attempt == _MAX_ATTEMPTS or not _is_retryable(exc):
                     raise
                 logger.warning(
-                    "TokenRouter chat() attempt %d/%d failed (%s), retrying...", attempt, _MAX_ATTEMPTS, exc,
+                    "Groq chat() attempt %d/%d failed (%s), retrying...", attempt, _MAX_ATTEMPTS, exc,
                 )
                 await asyncio.sleep(_RETRY_BACKOFF_SECONDS * attempt)
         raise AssertionError("unreachable")  # loop always returns or raises
@@ -83,6 +99,8 @@ class TokenRouterClient(LLMClient):
             "model": self._model,
             "messages": messages,
             "stream": True,
+            "reasoning_effort": _REASONING_EFFORT,
+            "max_completion_tokens": _MAX_COMPLETION_TOKENS,
         }
         for attempt in range(1, _MAX_ATTEMPTS + 1):
             # Retry is only safe before the first token reaches the caller —
@@ -105,7 +123,7 @@ class TokenRouterClient(LLMClient):
                             try:
                                 body = json.loads(data)
                             except json.JSONDecodeError:
-                                logger.warning("Skipping malformed TokenRouter stream line: %r", line[:200])
+                                logger.warning("Skipping malformed Groq stream line: %r", line[:200])
                                 continue
                             choices = body.get("choices") or [{}]
                             delta = choices[0].get("delta", {}).get("content", "")
@@ -117,7 +135,7 @@ class TokenRouterClient(LLMClient):
                 if yielded_any or attempt == _MAX_ATTEMPTS or not _is_retryable(exc):
                     raise
                 logger.warning(
-                    "TokenRouter chat_stream() attempt %d/%d failed before any content streamed (%s), retrying...",
+                    "Groq chat_stream() attempt %d/%d failed before any content streamed (%s), retrying...",
                     attempt, _MAX_ATTEMPTS, exc,
                 )
                 await asyncio.sleep(_RETRY_BACKOFF_SECONDS * attempt)
@@ -129,5 +147,5 @@ class TokenRouterClient(LLMClient):
             )
             return bool(message.get("content"))
         except (httpx.HTTPError, KeyError, IndexError) as exc:
-            logger.warning("TokenRouter health check failed: %s", exc)
+            logger.warning("Groq health check failed: %s", exc)
             return False

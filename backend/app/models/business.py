@@ -32,6 +32,12 @@ class Business(Base, TimestampMixin):
     # today — the column/API exist so a second mascot is a registry entry,
     # not a schema change, once more character art is produced.
     mascot_key: Mapped[str] = mapped_column(String(50), default="default")
+    # "calm" | "balanced" | "energetic" — scales how lively the mascot's
+    # motion is (see frontend AnimatedCharacter.animationFor). There's only
+    # one static character image today, so this is the only "expression"
+    # knob available without new art: it changes how the SAME image moves,
+    # not what it looks like.
+    mascot_energy: Mapped[str] = mapped_column(String(20), default="balanced")
     is_active: Mapped[bool] = mapped_column(default=True)
     # Exact scheme+host origins (e.g. "https://theirsite.com") this business
     # has registered to embed the widget on. Checked against the request's

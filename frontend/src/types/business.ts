@@ -6,6 +6,7 @@ export interface BusinessPublic {
   branding_color: string
   logo_url: string | null
   mascot_key: string
+  mascot_energy: string
 }
 
 export interface CampaignLandingPage {

@@ -8,7 +8,7 @@ class TokenUsageLog(Base, TimestampMixin):
     """One row per LLM call — the cost-visibility layer that didn't exist
     before ("you can't optimize what you can't see"). `call_type`
     distinguishes the two calls turn_orchestrator.py fires per turn:
-    "extraction" token counts are exact (TokenRouter reports them in the
+    "extraction" token counts are exact (Groq reports them in the
     response); "reply" counts are `is_estimated=True` (~4 chars/token on the
     streamed text) since the streaming response never reliably carries a
     `usage` field the way the non-streaming one does, and tracking it

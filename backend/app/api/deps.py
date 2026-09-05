@@ -4,17 +4,17 @@ from fastapi import Depends, Header, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.brain.groq_client import GroqClient
 from app.brain.interfaces import LLMClient
-from app.brain.token_router_client import TokenRouterClient
 from app.config.settings import get_settings
 from app.database.session import async_session_factory
 from app.knowledge.interfaces import KnowledgeProvider
-from app.knowledge.static_knowledge_provider import StaticKnowledgeProvider
+from app.knowledge.rag_knowledge_provider import RagKnowledgeProvider
 from app.models.business import Business
 from app.models.business_session import BusinessSession
 
-_llm_client: TokenRouterClient | None = None
-_knowledge_provider: StaticKnowledgeProvider | None = None
+_llm_client: GroqClient | None = None
+_knowledge_provider: RagKnowledgeProvider | None = None
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -51,12 +51,12 @@ async def get_current_business(
 def get_llm_client() -> LLMClient:
     global _llm_client
     if _llm_client is None:
-        _llm_client = TokenRouterClient(get_settings())
+        _llm_client = GroqClient(get_settings())
     return _llm_client
 
 
 def get_knowledge_provider() -> KnowledgeProvider:
     global _knowledge_provider
     if _knowledge_provider is None:
-        _knowledge_provider = StaticKnowledgeProvider()
+        _knowledge_provider = RagKnowledgeProvider()
     return _knowledge_provider

@@ -11,7 +11,7 @@ from app.models.business import Business
 
 # A bare app with only the router under test — not app.main.app, whose
 # lifespan seeds the real dev database and fires a real warm-up call to
-# TokenRouter. This keeps the test hermetic (in-memory db, no network).
+# Groq. This keeps the test hermetic (in-memory db, no network).
 
 
 def _make_client(db_session: AsyncSession) -> TestClient:

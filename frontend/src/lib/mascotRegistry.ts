@@ -31,3 +31,18 @@ export function mascotAssetsFor(mascotKey: string, assetBase = ''): MascotAssets
     welcoming: assetBase + assets.welcoming,
   }
 }
+
+/** Drives the portal's mascot picker — one entry per registered character.
+ * Adding a second mascot later is: one new MASCOT_REGISTRY entry above +
+ * one new entry here, no other code changes. */
+export const MASCOT_OPTIONS: { key: string; label: string }[] = [
+  { key: 'default', label: 'Classic' },
+]
+
+export type MascotEnergy = 'calm' | 'balanced' | 'energetic'
+
+export const MASCOT_ENERGY_OPTIONS: { key: MascotEnergy; label: string; hint: string }[] = [
+  { key: 'calm', label: 'Calm', hint: 'Subtle, minimal movement — best for formal/professional tones' },
+  { key: 'balanced', label: 'Balanced', hint: 'Natural, moderate movement — the default' },
+  { key: 'energetic', label: 'Energetic', hint: 'Lively, expressive movement — best for casual/friendly tones' },
+]

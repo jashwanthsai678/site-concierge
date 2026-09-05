@@ -1,4 +1,5 @@
 import { AnimatedCharacter, type VoiceOrbState } from '@/components/voice/AnimatedCharacter'
+import type { MascotEnergy } from '@/lib/mascotRegistry'
 import { SpeechBubble } from '@/components/voice/SpeechBubble'
 import { MicButton } from '@/components/voice/MicButton'
 import { TextInputBar } from '@/components/voice/TextInputBar'
@@ -36,6 +37,8 @@ export function MascotStage({
   suggestion,
   showHistory,
   onToggleHistory,
+  stageTier,
+  energy,
 }: {
   businessName: string
   mascotKey: string
@@ -57,6 +60,8 @@ export function MascotStage({
   suggestion: { label: string; onClick: () => void } | null
   showHistory: boolean
   onToggleHistory: () => void
+  stageTier: number
+  energy?: MascotEnergy
 }) {
   if (showHistory) {
     return <HistoryDrawer businessName={businessName} entries={transcript} onClose={onToggleHistory} />
@@ -124,7 +129,13 @@ export function MascotStage({
             🕘
           </button>
         )}
-        <AnimatedCharacter state={orbState} mascotKey={mascotKey} assetBase={assetBase} />
+        <AnimatedCharacter
+          state={orbState}
+          mascotKey={mascotKey}
+          assetBase={assetBase}
+          stageTier={stageTier}
+          energy={energy}
+        />
       </div>
 
       {!connecting && !endMessage && (

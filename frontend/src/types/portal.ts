@@ -11,6 +11,25 @@ export interface LoginResponse {
   business: BusinessPublic
 }
 
+/** What GET/PATCH /api/portal/me returns — the full, authenticated view of
+ * a business's own record, unlike BusinessPublic (used by public endpoints
+ * like the widget config), which deliberately omits persona/greeting/email/
+ * allowed_origins. */
+export interface PortalBusinessRead {
+  id: number
+  slug: string
+  email: string | null
+  name: string
+  industry: string
+  persona_description: string
+  greeting_template: string
+  branding_color: string
+  logo_url: string | null
+  mascot_key: string
+  mascot_energy: string
+  allowed_origins: string[]
+}
+
 export interface PortalBusinessUpdate {
   name?: string
   industry?: string
@@ -18,6 +37,7 @@ export interface PortalBusinessUpdate {
   greeting_template?: string
   branding_color?: string
   mascot_key?: string
+  mascot_energy?: string
   allowed_origins?: string[]
 }
 

@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/services/api'
 import { VoiceWidget } from '@/components/widget/VoiceWidget'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { HighlightProvider, useHighlight } from '@/lib/highlightContext'
 import type { BusinessPublic } from '@/types/business'
 import type { Topic } from '@/lib/topicMatch'
+import type { MascotEnergy } from '@/lib/mascotRegistry'
 
 export interface CompanySiteContext {
   business: BusinessPublic
@@ -83,18 +85,37 @@ export function CompanyWebsiteLayout() {
         </div>
       </nav>
 
-      <Outlet context={context} />
+      <HighlightProvider>
+        <Outlet context={context} />
 
-      <footer className="border-t border-gray-100 px-6 py-10 text-center text-xs text-gray-400 sm:px-12">
-        © {new Date().getFullYear()} {business.name}. All rights reserved.
-      </footer>
+        <footer className="border-t border-gray-100 px-6 py-10 text-center text-xs text-gray-400 sm:px-12">
+          © {new Date().getFullYear()} {business.name}. All rights reserved.
+        </footer>
 
-      <VoiceWidget
-        slug={slug}
-        businessName={business.name}
-        mascotKey={business.mascot_key}
-        onTopicMatch={handleTopicMatch}
-      />
+        <SiteConciergeWidget
+          slug={slug}
+          businessName={business.name}
+          mascotKey={business.mascot_key}
+          mascotEnergy={business.mascot_energy as MascotEnergy}
+          onTopicMatch={handleTopicMatch}
+        />
+      </HighlightProvider>
     </div>
   )
+}
+
+/**
+ * A thin wrapper so useHighlight() (which requires a HighlightProvider
+ * ancestor) can be called here rather than in CompanyWebsiteLayout itself —
+ * that component renders the HighlightProvider, so it can't also consume it.
+ */
+function SiteConciergeWidget(props: {
+  slug: string
+  businessName: string
+  mascotKey: string
+  mascotEnergy: MascotEnergy
+  onTopicMatch: (topic: Topic) => void
+}) {
+  const { trigger } = useHighlight()
+  return <VoiceWidget {...props} onHighlight={trigger} />
 }

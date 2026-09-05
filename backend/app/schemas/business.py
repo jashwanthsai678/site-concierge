@@ -13,6 +13,31 @@ class BusinessPublic(BaseModel):
     branding_color: str
     logo_url: str | None
     mascot_key: str
+    mascot_energy: str
+
+
+class PortalBusinessRead(BaseModel):
+    """What GET/PATCH /api/portal/me returns — unlike BusinessPublic (used
+    by public, unauthenticated endpoints like the widget config), this is
+    only ever served to the logged-in business itself, so it's safe to
+    include the internal fields (persona, greeting, allowed origins, email)
+    that a public endpoint must never leak.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    slug: str
+    email: str | None
+    name: str
+    industry: str
+    persona_description: str
+    greeting_template: str
+    branding_color: str
+    logo_url: str | None
+    mascot_key: str
+    mascot_energy: str
+    allowed_origins: list[str]
 
 
 class CampaignLandingPage(BaseModel):
@@ -43,6 +68,7 @@ class BusinessCreate(BaseModel):
     greeting_template: str = Field(max_length=500)
     branding_color: str = Field(default="#2a78d6", max_length=20)
     mascot_key: str = Field(default="default", max_length=50)
+    mascot_energy: str = Field(default="balanced", max_length=20)
     landing_page_slug: str = Field(max_length=120)
     ad_creative_headline: str = Field(max_length=300)
     ad_creative_body: str = Field(max_length=500)
@@ -97,6 +123,7 @@ class PortalBusinessUpdate(BaseModel):
     greeting_template: str | None = Field(default=None, max_length=500)
     branding_color: str | None = Field(default=None, max_length=20)
     mascot_key: str | None = Field(default=None, max_length=50)
+    mascot_energy: str | None = Field(default=None, max_length=20)
     allowed_origins: list[str] | None = None
 
 

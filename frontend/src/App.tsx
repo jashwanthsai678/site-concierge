@@ -7,6 +7,8 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
 import { PortalLoginPage } from '@/pages/portal/PortalLoginPage'
 import { PortalLayout } from '@/pages/portal/PortalLayout'
+import { PortalOverviewPage } from '@/pages/portal/PortalOverviewPage'
+import { PortalBotSetupPage } from '@/pages/portal/PortalBotSetupPage'
 import { PortalSettingsPage } from '@/pages/portal/PortalSettingsPage'
 import { PortalKnowledgePage } from '@/pages/portal/PortalKnowledgePage'
 import { PortalEmbedPage } from '@/pages/portal/PortalEmbedPage'
@@ -39,8 +41,10 @@ export default function App() {
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/portal/login" element={<PortalLoginPage />} />
           <Route path="/portal" element={<PortalLayout />}>
-            <Route index element={<PortalSettingsPage />} />
+            <Route index element={<PortalOverviewPage />} />
+            <Route path="bot-setup" element={<PortalBotSetupPage />} />
             <Route path="knowledge" element={<PortalKnowledgePage />} />
+            <Route path="settings" element={<PortalSettingsPage />} />
             <Route path="embed" element={<PortalEmbedPage />} />
             <Route path="leads" element={<PortalLeadsPage />} />
           </Route>

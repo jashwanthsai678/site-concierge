@@ -11,6 +11,8 @@ import { MascotStage } from '@/components/widget/MascotStage'
 import type { VoiceOrbState } from '@/components/voice/AnimatedCharacter'
 import type { TranscriptEntry } from '@/types/conversation'
 import { matchTopic, type Topic } from '@/lib/topicMatch'
+import { matchHighlightEntity } from '@/lib/highlightMatch'
+import type { MascotEnergy } from '@/lib/mascotRegistry'
 import { stepIndexForStage, suggestionForStage } from '@/lib/stageGuide'
 
 type WidgetState = 'collapsed' | 'prompting' | 'connecting' | 'active' | 'ended'
@@ -49,16 +51,20 @@ export function VoiceWidget({
   slug,
   businessName,
   mascotKey = 'default',
+  mascotEnergy = 'balanced',
   apiBase,
   assetBase,
   onTopicMatch,
+  onHighlight,
 }: {
   slug: string
   businessName: string
   mascotKey?: string
+  mascotEnergy?: MascotEnergy
   apiBase?: string
   assetBase?: string
   onTopicMatch?: (topic: Topic) => void
+  onHighlight?: (id: string) => void
 }) {
   const [state, setState] = useState<WidgetState>('collapsed')
   const [conversationId, setConversationId] = useState<number | null>(null)
@@ -81,6 +87,11 @@ export function VoiceWidget({
   // Topics already covered — either the AI happened to mention one, or the
   // visitor tapped a suggestion chip — so the same nudge never repeats.
   const visitedTopicsRef = useRef<Set<Topic>>(new Set())
+  // The topic navigated to for the CURRENT reply — reset per turn so a
+  // multi-sentence reply that stays on one topic doesn't re-navigate on
+  // every sentence, but a reply that moves from one topic to another
+  // mid-answer (e.g. pricing, then destinations) still follows it there.
+  const lastNavigatedTopicRef = useRef<Topic | null>(null)
 
   const engagement = useEngagementTracker(() => {
     if (!dismissedRef.current) setState((s) => (s === 'collapsed' ? 'prompting' : s))
@@ -108,6 +119,7 @@ export function VoiceWidget({
     useSpeechRecognition((text) => {
       pushTranscript('visitor', text)
       setIsThinking(true)
+      lastNavigatedTopicRef.current = null
       sendUtterance(text)
     })
 
@@ -127,7 +139,29 @@ export function VoiceWidget({
         else startListening()
       }
     },
-    onAssistantChunk: (data) => enqueue(data.text),
+    // Topic/highlight detection runs HERE, per completed sentence, rather
+    // than waiting for the whole reply — this is what lets the page/mascot
+    // move in step with the specific thing being said, instead of jumping
+    // all at once after the AI has already finished talking about it.
+    onAssistantChunk: (data) => {
+      enqueue(data.text)
+      if (!data.is_sentence_boundary) return
+
+      const topic = matchTopic(data.text)
+      if (topic) {
+        visitedTopicsRef.current.add(topic)
+        if (topic !== lastNavigatedTopicRef.current) {
+          lastNavigatedTopicRef.current = topic
+          onTopicMatch?.(topic)
+        }
+        if (pointingTimerRef.current) clearTimeout(pointingTimerRef.current)
+        setIsPointing(true)
+        pointingTimerRef.current = setTimeout(() => setIsPointing(false), POINTING_DURATION_MS)
+
+        const highlightId = matchHighlightEntity(data.text, topic)
+        if (highlightId) onHighlight?.(highlightId)
+      }
+    },
     onAssistantDone: (data) => {
       setIsThinking(false)
       setStage(data.stage)
@@ -135,15 +169,6 @@ export function VoiceWidget({
       if (mode === 'voice') {
         if (isSpeakingNow()) pendingAutoListenRef.current = true
         else startListening()
-      }
-
-      const topic = matchTopic(data.full_text)
-      if (topic) {
-        visitedTopicsRef.current.add(topic)
-        onTopicMatch?.(topic)
-        if (pointingTimerRef.current) clearTimeout(pointingTimerRef.current)
-        setIsPointing(true)
-        pointingTimerRef.current = setTimeout(() => setIsPointing(false), POINTING_DURATION_MS)
       }
     },
     onConversationEnd: (data) => {
@@ -230,6 +255,7 @@ export function VoiceWidget({
       if (isListening) stopListening()
       pushTranscript('visitor', text)
       setIsThinking(true)
+      lastNavigatedTopicRef.current = null
       sendUtterance(text)
     },
     [isListening, stopListening, pushTranscript, sendUtterance],
@@ -244,6 +270,7 @@ export function VoiceWidget({
       visitedTopicsRef.current.add(topic)
       pushTranscript('visitor', prompt)
       setIsThinking(true)
+      lastNavigatedTopicRef.current = null
       sendUtterance(prompt)
     },
     [pushTranscript, sendUtterance],
@@ -298,6 +325,8 @@ export function VoiceWidget({
       }
       showHistory={showHistory}
       onToggleHistory={() => setShowHistory((v) => !v)}
+      stageTier={stepIndexForStage(stage)}
+      energy={mascotEnergy}
     />
   )
 }

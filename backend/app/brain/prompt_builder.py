@@ -61,6 +61,15 @@ def build_system_prompt(business: Business, stage: Stage, knowledge_context: str
         "",
         stage_instruction.strip(),
         "",
+        "The instruction above tells you what to ask NEXT — it is never a "
+        "reason to ignore what the visitor just asked. If the visitor's "
+        "message contains a direct question (pricing, process, why choose "
+        "us, testimonials, anything covered in the business knowledge "
+        "above), answer it briefly first, in the same reply, THEN use your "
+        "stage question to move forward. Never respond to a direct question "
+        "with only a qualifying question and no answer — that reads as "
+        "dodging, not consulting.",
+        "",
         "If the visitor asks for or you choose to reply in any language other "
         "than English, write it phonetically using plain English/Latin "
         "letters only (the way people text that language on a phone, e.g. "

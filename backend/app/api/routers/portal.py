@@ -9,12 +9,12 @@ from app.models.business import Business
 from app.models.knowledge import KnowledgeItem
 from app.models.token_usage import TokenUsageLog
 from app.schemas.business import (
-    BusinessPublic,
     IngestRequest,
     IngestResponse,
     KnowledgeBulkCreate,
     KnowledgeItemRead,
     KnowledgeItemUpdate,
+    PortalBusinessRead,
     PortalBusinessUpdate,
 )
 from app.schemas.lead import LeadRead
@@ -23,12 +23,12 @@ from app.schemas.usage import UsageSummary
 router = APIRouter(prefix="/api/portal", tags=["portal"])
 
 
-@router.get("/me", response_model=BusinessPublic)
+@router.get("/me", response_model=PortalBusinessRead)
 async def get_my_business(business: Business = Depends(get_current_business)) -> Business:
     return business
 
 
-@router.patch("/me", response_model=BusinessPublic)
+@router.patch("/me", response_model=PortalBusinessRead)
 async def update_my_business(
     payload: PortalBusinessUpdate,
     business: Business = Depends(get_current_business),
@@ -116,7 +116,7 @@ async def get_my_usage(
     spent for this business, broken down by call type. `reply` tokens are
     an estimate (~4 chars/token on the streamed text, see
     conversation/turn_orchestrator.py's `_record_usage`); `extraction`
-    tokens are exact, as reported by TokenRouter.
+    tokens are exact, as reported by Groq.
     """
     rows = (
         await db.execute(select(TokenUsageLog).where(TokenUsageLog.business_id == business.id))

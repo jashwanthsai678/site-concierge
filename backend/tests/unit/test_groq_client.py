@@ -1,16 +1,16 @@
 import httpx
 import pytest
 
-from app.brain.token_router_client import TokenRouterClient
+from app.brain.groq_client import GroqClient
 from app.config.settings import Settings
 
 
 def _settings() -> Settings:
-    return Settings(token_router_api_key="test-key", token_router_model="test-model")
+    return Settings(groq_api_key="test-key", groq_model="test-model")
 
 
 def _patch_transport(monkeypatch, handler) -> None:
-    """TokenRouterClient constructs a fresh httpx.AsyncClient per call with
+    """GroqClient constructs a fresh httpx.AsyncClient per call with
     no injectable transport — the least invasive way to test its retry
     behavior without changing the production code is to make every
     httpx.AsyncClient() built during the test use a MockTransport instead
@@ -43,7 +43,7 @@ async def test_chat_retries_a_503_then_succeeds(monkeypatch):
         return _success_response()
 
     _patch_transport(monkeypatch, handler)
-    client = TokenRouterClient(_settings())
+    client = GroqClient(_settings())
 
     result = await client.chat([{"role": "user", "content": "hi"}])
 
@@ -60,7 +60,7 @@ async def test_chat_gives_up_after_max_attempts(monkeypatch):
         return httpx.Response(503)
 
     _patch_transport(monkeypatch, handler)
-    client = TokenRouterClient(_settings())
+    client = GroqClient(_settings())
 
     with pytest.raises(httpx.HTTPStatusError):
         await client.chat([{"role": "user", "content": "hi"}])
@@ -75,7 +75,7 @@ async def test_chat_does_not_retry_a_4xx(monkeypatch):
         return httpx.Response(400, json={"error": "bad request"})
 
     _patch_transport(monkeypatch, handler)
-    client = TokenRouterClient(_settings())
+    client = GroqClient(_settings())
 
     with pytest.raises(httpx.HTTPStatusError):
         await client.chat([{"role": "user", "content": "hi"}])
@@ -100,7 +100,7 @@ async def test_chat_stream_retries_before_any_content_yielded(monkeypatch):
         return httpx.Response(200, content=_sse_success_body())
 
     _patch_transport(monkeypatch, handler)
-    client = TokenRouterClient(_settings())
+    client = GroqClient(_settings())
 
     deltas = [delta async for delta in client.chat_stream([{"role": "user", "content": "hi"}])]
 
@@ -125,7 +125,7 @@ async def test_chat_stream_does_not_retry_once_content_has_streamed(monkeypatch)
         return httpx.Response(200, stream=_RaisingStream())
 
     _patch_transport(monkeypatch, raising_handler)
-    client = TokenRouterClient(_settings())
+    client = GroqClient(_settings())
 
     received = []
     with pytest.raises(httpx.ReadError):
