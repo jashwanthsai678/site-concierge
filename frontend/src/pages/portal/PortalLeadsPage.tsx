@@ -13,6 +13,21 @@ export function PortalLeadsPage() {
 
       {query.isLoading ? (
         <LoadingSpinner size={20} />
+      ) : query.isError ? (
+        // Without this branch a failed fetch fell through to the empty
+        // state below and told the client "No leads yet" — for a lead-gen
+        // product, reporting a backend outage as "nobody contacted you" is
+        // the single most damaging thing this page could say.
+        <PortalCard>
+          <p className="text-xs text-red-600">Couldn't load your leads just now.</p>
+          <button
+            type="button"
+            onClick={() => void query.refetch()}
+            className="mt-2 text-xs font-semibold text-gray-700 underline"
+          >
+            Try again
+          </button>
+        </PortalCard>
       ) : (query.data ?? []).length === 0 ? (
         <PortalCard>
           <p className="text-xs text-gray-400">No leads yet — they'll show up here as conversations complete.</p>

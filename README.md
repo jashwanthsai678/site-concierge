@@ -158,10 +158,16 @@ snippet, generated automatically at the end of onboarding:
 <script src="https://yourapp.com/widget.js" defer></script>
 ```
 
-Build the bundle with `npm run build:widget` (outputs a single
-self-contained `dist-widget/widget.js`, separate from the normal SPA
-build). A config global is used rather than `document.currentScript` or a
-`data-*` attribute — the same pattern most embeddable widgets use, since
+`npm run build:widget` emits a single self-contained IIFE straight into
+`frontend/public/widget.js`, so the SPA serves it at `/widget.js` on its
+own origin — exactly the path the snippet above points at, in dev and in a
+production build alike (`npm run build` runs the widget build first, so
+`dist/` always contains a matching copy). It used to build to
+`dist-widget/`, which nothing served: the snippet the portal handed clients
+404'd unless whoever deployed remembered to move the file by hand.
+
+A config global is used rather than `document.currentScript` or a `data-*`
+attribute — the same pattern most embeddable widgets use, since
 `currentScript` is unreliable across browsers for deferred/module scripts.
 
 **Security**: a business must register the exact origin(s) it'll embed
@@ -175,8 +181,26 @@ the route handler, before `accept()`). An unregistered origin gets a clean
 
 **Isolation**: the widget mounts into a shadow root, so neither the host
 page's CSS can affect the widget, nor the widget's own (Tailwind-compiled)
-styles can leak onto the host page — verified with a deliberately hostile
-host-page stylesheet during development.
+styles can leak onto the host page. Three things a shadow root alone does
+*not* give you, each of which broke on a realistic host page and is now
+handled:
+
+- Inherited CSS properties (font-family, color, line-height) cross the
+  shadow boundary regardless — a `:host { all: initial }` reset in
+  `index.css` cuts that, or the widget silently renders in the client's
+  font.
+- The bubble sat at `z-index: 50`, which any real sticky header or cookie
+  banner buries. It's now `2147483647`, the convention embeddable widgets
+  use for exactly this reason.
+- `position: fixed` re-anchors to any ancestor with a `transform` /
+  `filter` / `contain`, which smooth-scroll and page-transition libraries
+  routinely put on `<body>`. The widget's host element is appended to
+  `<html>`, outside `<body>`, to sidestep that.
+
+`test-sites/` holds two static pages for checking this end-to-end against
+the real embed snippet: `generic-business/` (a normal-looking client site)
+and `hostile-css/` (transformed body, Comic Sans, `button { all: unset }`,
+two z-index-999999 overlays). Serving instructions are in each file.
 
 ## Client portal
 
@@ -190,6 +214,8 @@ with a password, not just a persona. From `/portal/login`, that business can:
   only add rows; the portal is where mistakes get fixed
 - View and copy their embed snippet (`/portal/embed`)
 - See their own qualified leads (`/portal/leads`)
+- See live stats, their lead pipeline, and full conversation transcripts
+  (`/dashboard`)
 
 Auth is an opaque bearer token (`BusinessSession`, same pattern as
 `Visitor.session_token`) rather than a JWT — trivially revocable on logout,
@@ -199,31 +225,43 @@ row ownership before any mutation, so one business can never edit or even
 discover another's data by guessing an ID (verified: a cross-business
 delete attempt 404s, not 403 — it doesn't even confirm the row exists).
 
-**Known gap, left alone on purpose**: the existing internal `/api/leads`
-endpoint (used by the separate operator-facing `/dashboard`) still trusts a
-`business_id` query parameter with no auth at all. It wasn't retrofitted
-here since that dashboard is a different audience (you, not a client) —
-worth closing if `/dashboard` is ever exposed beyond local/internal use.
+Session tokens expire (30 days) and both login and signup are rate-limited.
+
+`/dashboard` (live stats, lead pipeline, full conversation transcripts) is
+part of the same client-facing surface and is scoped the same way. It was
+previously unguarded and bootstrapped off a `GET /api/business/current`
+that returned whichever business happened to be first in the table, so one
+client could read and edit another's leads and transcripts just by typing
+the URL — and `/ws/dashboard` broadcast every tenant's live lead PII to
+every connected socket, filtered only by a client-side `if` in the browser
+that had already received the data. `/api/leads`, `/api/conversations` and
+`/api/analytics/*` now all derive the business from the session token
+(there is no caller-supplied `business_id` left to tamper with),
+`/ws/dashboard` requires that token and fans out per-business, and
+`/api/business/current` is gone.
 
 **Not yet built**: voice selection (blocked on the free-vs-paid TTS
-provider decision) and a real mascot picker (there's only one mascot to
-choose from today) — both deferred, not forgotten. Full list in
+provider decision) — deferred, not forgotten. A business *can* already
+upload their own mascot character image from the portal instead of using
+the single built-in one, though it's still one custom image, not a
+gallery of pre-made alternate characters. Full list in
 `PRODUCTION_ROADMAP.md`.
 
 ## Prerequisites
 
 - Python 3.10+
 - Node 20+
-- A [TokenRouter](https://tokenrouter.com) API key, in `backend/.env`:
+- A [Groq](https://groq.com) API key, in `backend/.env`:
   ```
-  TOKEN_ROUTER_BASE_URL=https://api.tokenrouter.com/v1
-  TOKEN_ROUTER_API_KEY=<your key>
-  TOKEN_ROUTER_MODEL=qwen/qwen3.8-max-free
+  GROQ_BASE_URL=https://api.groq.com/openai/v1
+  GROQ_API_KEY=<your key>
+  GROQ_MODEL=openai/gpt-oss-20b
   ```
-- (Optional — for RAG knowledge retrieval) A [Qdrant](https://qdrant.tech) URL
-  + API key in `backend/.env` (`QDRANT_URL`, `QDRANT_API_KEY`). Without
-  these, `RagKnowledgeProvider` just degrades to no extra context per turn
-  rather than failing — see its docstring. Once set, run:
+- A [Qdrant](https://qdrant.tech) URL + API key in `backend/.env`
+  (`QDRANT_URL`, `QDRANT_API_KEY`) — `RagKnowledgeProvider` is the active
+  knowledge provider (see `api/deps.py`); without these it degrades to no
+  extra context per turn rather than failing, so the widget still runs
+  without Qdrant, just without grounding. Once set, run:
   ```powershell
   cd backend
   python -m app.knowledge.ingestion_service
@@ -254,12 +292,12 @@ cd ..
 ```
 
 The backend seeds its one demo business automatically on startup (see
-`backend/app/database/seed.py`) and fires a warm-up call to TokenRouter so
+`backend/app/database/seed.py`) and fires a warm-up call to Groq so
 the first real conversation isn't the request that first discovers a bad
 key or connectivity issue.
 
 - Backend health: http://localhost:8010/api/health — `model_ready: true`
-  confirms TokenRouter actually returned a completion, not just that a key
+  confirms Groq actually returned a completion, not just that a key
   is configured.
 - Ad simulator: http://localhost:5173/demo
 - Dashboard: http://localhost:5173/dashboard
@@ -268,11 +306,11 @@ key or connectivity issue.
 
 ## Running it with Docker Compose
 
-TokenRouter is a hosted API, so nothing extra needs to run on the host —
-set `TOKEN_ROUTER_API_KEY` in your shell before bringing the stack up:
+Groq is a hosted API, so nothing extra needs to run on the host —
+set `GROQ_API_KEY` in your shell before bringing the stack up:
 
 ```bash
-export TOKEN_ROUTER_API_KEY=<your key>
+export GROQ_API_KEY=<your key>
 docker compose -f docker/docker-compose.yml up --build
 ```
 
@@ -286,7 +324,7 @@ Clean Architecture layering in `backend/app/`:
 ```
 models/        entities — SQLAlchemy ORM, depend on nothing
 schemas/       Pydantic DTOs — kept separate from ORM models on purpose
-brain/         the LLM boundary (TokenRouter client, prompt building, stage
+brain/         the LLM boundary (GroqClient, prompt building, stage
                strategy, extraction) — the only place that imports httpx
                against an LLM provider's API directly
 conversation/  use-case orchestration for a live turn (turn_orchestrator.py
@@ -329,7 +367,7 @@ is the client-facing self-service app, gated by `PortalLayout`.
 - **Turn 1 (the greeting) never calls the LLM.** It's a business-configured
   template, spoken immediately — that's what makes "greet within 2
   seconds" a guarantee, not a hope.
-- **Two TokenRouter calls run concurrently per user turn** (`asyncio.gather` in
+- **Two Groq calls run concurrently per user turn** (`asyncio.gather` in
   `turn_orchestrator.py`): a structured lead-extraction call and the
   conversational reply. The reply reads the *previous* turn's fields, which
   is what makes the concurrency safe (no write-path overlap) and fast
@@ -356,10 +394,11 @@ is the client-facing self-service app, gated by `PortalLayout`.
   key per turn) and only sends the resulting vectors to Qdrant — chosen
   because this is a live voice conversation where per-turn latency matters.
   Ingestion (`knowledge/ingestion_service.py`) is a separate, standalone
-  step, never run from a live turn. `StaticKnowledgeProvider` (flat-row
-  concatenation, no external dependency) is the currently *active* default
-  in `api/deps.py` — RAG is built and tested but sits dormant until Qdrant
-  is actually provisioned for a given environment.
+  step, never run from a live turn. `RagKnowledgeProvider` is the active
+  provider in `api/deps.py`; `StaticKnowledgeProvider` (flat-row
+  concatenation, no external dependency) still exists as a fallback for an
+  environment with no Qdrant configured, but isn't what's wired in by
+  default anymore.
 - **Topic values double as page routes.** `lib/topicMatch.ts`'s keyword
   matching returns a `Topic` (e.g. `'pricing'`), and `CompanyWebsiteLayout`
   navigates to `/site/:slug/<topic>` directly — one mapping instead of two,
@@ -401,7 +440,10 @@ pytest
 ```
 
 Unit tests cover the pure functions (`stage_strategy.py`, `crm/scoring.py`,
-`utils/json_extraction.py`, `utils/security.py`) with no I/O; integration
+`utils/json_extraction.py`, `utils/security.py`, `api/rate_limit.py`,
+`knowledge/website_crawler.py`'s SSRF host check) with no I/O; integration
 tests exercise `turn_orchestrator.py`, the onboarding/widget/CORS routers,
-and the full auth + portal flow (including cross-business isolation) end
-to end against a fake `LLMClient` (no real TokenRouter call in CI).
+the dashboard WebSocket's origin check, and the full auth + portal flow
+(cross-business isolation on leads/conversations/knowledge, session
+expiry, mascot image upload including a spoofed-content-type rejection)
+end to end against a fake `LLMClient` (no real Groq call in CI).

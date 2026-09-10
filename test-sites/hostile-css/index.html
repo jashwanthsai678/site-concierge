@@ -1,0 +1,90 @@
+<!doctype html>
+<!--
+  The stress-test counterpart to ../generic-business/index.html. Every
+  hostile thing on this page is something real client sites actually do,
+  and each one broke the widget at some point:
+
+    - transform on <body>          -> creates a containing block, which used
+                                      to re-anchor the widget's position:fixed
+                                      away from the viewport (smooth-scroll and
+                                      page-transition libraries do this)
+    - z-index: 999999 overlays     -> used to bury the widget bubble, which
+                                      sat at z-index 50
+    - body { font-family: ... }    -> inherited THROUGH the shadow boundary
+                                      (Shadow DOM blocks selectors, not
+                                      inherited properties)
+    - button { all: unset }        -> the kind of global reset that would
+                                      destroy the widget's own controls if
+                                      they weren't in a shadow root
+
+  Serve it from the repo root with:
+    npx http-server test-sites/hostile-css -p 5177 -c-1
+
+  Then register http://localhost:5177 under Portal -> Settings -> Allowed
+  embed origins.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hostile Host Page — Widget Stress Test</title>
+  <style>
+    * { box-sizing: content-box !important; }
+
+    body {
+      transform: translateZ(0);
+      font-family: 'Comic Sans MS', cursive;
+      background: repeating-linear-gradient(45deg, #ffcccc, #ffcccc 10px, #ccffcc 10px, #ccffcc 20px);
+      color: red;
+      margin: 0;
+      min-height: 220vh;
+    }
+
+    button { all: unset !important; background: purple !important; color: yellow !important; font-size: 40px !important; }
+    div { border: 5px dashed blue !important; }
+
+    #sticky-header {
+      position: fixed; top: 0; left: 0; right: 0; height: 60px;
+      background: #222; color: #fff; z-index: 999999;
+      display: flex; align-items: center; padding: 0 20px;
+      font-family: Arial, sans-serif; font-size: 18px;
+    }
+    #cookie-banner {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 80px;
+      background: #111; color: #fff; z-index: 999998;
+      display: flex; align-items: center; justify-content: center;
+      font-family: Arial, sans-serif;
+    }
+    .content { padding: 90px 30px 140px; max-width: 760px; }
+  </style>
+</head>
+<body>
+  <div id="sticky-header">Fake sticky nav &mdash; z-index: 999999</div>
+  <div id="cookie-banner">Fake cookie banner &mdash; z-index: 999998</div>
+
+  <div class="content">
+    <h1>Deliberately Hostile Host Page</h1>
+    <p>
+      Comic Sans on the body, a <code>transform</code> on the body, a global
+      <code>button { all: unset }</code> reset, <code>box-sizing</code> forced to
+      <code>content-box</code>, dashed blue borders on every div, and two overlays
+      pinned at z-index 999999.
+    </p>
+    <p>
+      The widget should still: appear above both overlays, keep its own font and
+      styling, stay pinned to the viewport corner while you scroll, and hold a full
+      conversation. Scroll down — the bubble must not drift.
+    </p>
+    <div id="marker">host-page-marker</div>
+    <p style="margin-top: 60vh">Keep scrolling. The bubble should not have moved.</p>
+  </div>
+
+  <script>
+    window.SITE_CONCIERGE_CONFIG = {
+      slug: "horizon-overseas-education",
+      apiBase: "http://localhost:8010"
+    };
+  </script>
+  <script src="http://localhost:5173/widget.js" defer></script>
+</body>
+</html>

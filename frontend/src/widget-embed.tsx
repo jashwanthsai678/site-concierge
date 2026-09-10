@@ -56,7 +56,15 @@ async function mount() {
 
   const host = document.createElement('div')
   host.id = 'site-concierge-widget-host'
-  document.body.appendChild(host)
+  // Appended as a sibling of <body> (under <html>), NOT inside it. A
+  // `position: fixed` descendant is positioned relative to the nearest
+  // ancestor that establishes a containing block (any ancestor with a
+  // `transform`, `filter`, `perspective`, `contain`, or `will-change`) —
+  // real client sites set exactly that on <body> surprisingly often (smooth-
+  // scroll libraries, page-transition effects, some page-builder themes).
+  // Living outside <body> means the widget can only ever be broken by
+  // <html> itself having one of those properties, which is far rarer.
+  document.documentElement.appendChild(host)
 
   const shadow = host.attachShadow({ mode: 'open' })
   const style = document.createElement('style')

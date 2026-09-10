@@ -13,18 +13,11 @@ from app.utils.ids import new_session_token
 router = APIRouter(prefix="/api", tags=["pages"])
 
 
-@router.get("/business/current", response_model=BusinessPublic)
-async def get_current_business(db: AsyncSession = Depends(get_db)) -> Business:
-    """Bootstraps the dashboard with the single active demo business — no
-    auth/multi-tenancy in this MVP, but every downstream query still filters
-    by business_id (see analytics/, crm/) so a second business costs a seed
-    row, not a migration.
-    """
-    result = await db.execute(select(Business).where(Business.is_active.is_(True)).limit(1))
-    business = result.scalars().first()
-    if business is None:
-        raise HTTPException(status_code=404, detail="No active business configured.")
-    return business
+# `GET /business/current` used to live here: it returned whichever business
+# happened to be first in the table, with no auth, purely to bootstrap
+# /dashboard. With more than one business on the instance that is a
+# cross-tenant leak by construction, so the dashboard now bootstraps from
+# the session's own business via /api/portal/me instead.
 
 
 @router.get("/pages/{slug}", response_model=CampaignLandingPage)

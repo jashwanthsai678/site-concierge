@@ -3,6 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom'
 import { queryClient } from '@/services/queryClient'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { RequireAuth } from '@/components/common/RequireAuth'
 
 // Route-level code splitting — without this, visiting the demo/embeddable-
 // widget site downloaded the entire portal bundle (forms, mascot upload,
@@ -72,7 +73,18 @@ export default function App() {
               <Route path="testimonials" element={<TestimonialsPage />} />
               <Route path="faq" element={<FaqPage />} />
             </Route>
-            <Route path="/dashboard" element={<DashboardPage />} />
+            {/* Guarded: this page shows lead PII and full visitor
+                transcripts. It was previously open to anyone who typed the
+                URL, and bootstrapped off "whichever business is first in
+                the table" — so one client could read another's leads. */}
+            <Route
+              path="/dashboard"
+              element={
+                <RequireAuth>
+                  <DashboardPage />
+                </RequireAuth>
+              }
+            />
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/portal/login" element={<PortalLoginPage />} />
             <Route path="/portal" element={<PortalLayout />}>

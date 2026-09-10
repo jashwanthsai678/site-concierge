@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 from collections.abc import AsyncIterator
 
 import httpx
@@ -15,7 +16,40 @@ logger = logging.getLogger(__name__)
 # would otherwise need to reimplement the same retry/backoff policy.
 _MAX_ATTEMPTS = 3
 _RETRY_BACKOFF_SECONDS = 0.5
-_RETRYABLE_STATUS_CODES = {500, 502, 503, 504}
+# 429 (rate limit) is included here too — unlike a normal 4xx that won't
+# fix itself, Groq's per-minute token bucket genuinely refills, and it
+# tells us exactly when via the x-ratelimit-reset-tokens response header.
+# Previously this failed the whole turn immediately on any 429, which is
+# most of why a real conversation would just stop working partway through
+# — a short, bounded wait-and-retry here turns a fast-refilling rate limit
+# into a slightly slower reply instead of a hard error.
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+# Never make a visitor wait longer than this for a single retry — if the
+# reported reset time exceeds it, better to fail the turn with a clear
+# "try again" message than leave the widget looking frozen.
+_MAX_RATE_LIMIT_WAIT_SECONDS = 8.0
+_RESET_HEADER_PATTERN = re.compile(r"^(\d+(?:\.\d+)?)s$")
+
+
+def _parse_reset_seconds(value: str | None) -> float | None:
+    """Parses Groq's `x-ratelimit-reset-tokens` header (e.g. "1.6s",
+    "45.525s") — only the plain-seconds form; the longer "1h24m57s" form
+    (seen on the requests-per-day limit, not the tokens-per-minute one
+    that actually bites here) isn't handled and just falls back to the
+    normal backoff.
+    """
+    if not value:
+        return None
+    match = _RESET_HEADER_PATTERN.match(value.strip())
+    return float(match.group(1)) if match else None
+
+
+def _compute_retry_wait(exc: Exception, attempt: int) -> float:
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+        reset_seconds = _parse_reset_seconds(exc.response.headers.get("x-ratelimit-reset-tokens"))
+        if reset_seconds is not None:
+            return min(reset_seconds, _MAX_RATE_LIMIT_WAIT_SECONDS)
+    return _RETRY_BACKOFF_SECONDS * attempt
 
 # Reasoning models (the gpt-oss family on Groq's free tier) spend tokens on
 # hidden chain-of-thought before ever producing visible content — measured
@@ -30,7 +64,24 @@ _RETRYABLE_STATUS_CODES = {500, 502, 503, 504}
 # without a cap a reasoning model is free to run arbitrarily long and can
 # exhaust the same per-minute budget on a single unlucky turn.
 _REASONING_EFFORT = "low"
+# `chat()` is used for BOTH the structured JSON extraction call (name/
+# phone/budget/summary/etc. — genuinely needs the room) and the health
+# check, so it keeps a generous cap. `chat_stream()` is ONLY ever the
+# visible conversational reply a visitor reads/hears — the prompt already
+# asks for short replies, but that's a request the model doesn't reliably
+# follow on its own (measured live: it happily writes 80-100+ word replies
+# listing multiple pricing tiers when asked one pricing question). A real
+# token ceiling is the actual enforcement mechanism, not a suggestion.
 _MAX_COMPLETION_TOKENS = 400
+# 90 was measured live to be too tight: reasoning-token usage varies with
+# how much context is in play (full conversation history + knowledge
+# context, not just the bare utterance), and a real production reply got
+# cut off mid-sentence ("Are you leaning toward" — no ending) when
+# reasoning ate more of the 90-token budget than a quick isolated test
+# predicted. A visibly truncated reply is worse than a slightly longer
+# one — 150 leaves real headroom while still being a hard ceiling far
+# below the old 400 (which allowed 100+ word rambling).
+_MAX_REPLY_COMPLETION_TOKENS = 150
 
 
 def _is_retryable(exc: Exception) -> bool:
@@ -88,10 +139,12 @@ class GroqClient(LLMClient):
             except Exception as exc:
                 if attempt == _MAX_ATTEMPTS or not _is_retryable(exc):
                     raise
+                wait = _compute_retry_wait(exc, attempt)
                 logger.warning(
-                    "Groq chat() attempt %d/%d failed (%s), retrying...", attempt, _MAX_ATTEMPTS, exc,
+                    "Groq chat() attempt %d/%d failed (%s), retrying in %.1fs...",
+                    attempt, _MAX_ATTEMPTS, exc, wait,
                 )
-                await asyncio.sleep(_RETRY_BACKOFF_SECONDS * attempt)
+                await asyncio.sleep(wait)
         raise AssertionError("unreachable")  # loop always returns or raises
 
     async def chat_stream(self, messages: list[dict]) -> AsyncIterator[str]:
@@ -100,7 +153,7 @@ class GroqClient(LLMClient):
             "messages": messages,
             "stream": True,
             "reasoning_effort": _REASONING_EFFORT,
-            "max_completion_tokens": _MAX_COMPLETION_TOKENS,
+            "max_completion_tokens": _MAX_REPLY_COMPLETION_TOKENS,
         }
         for attempt in range(1, _MAX_ATTEMPTS + 1):
             # Retry is only safe before the first token reaches the caller —
@@ -134,11 +187,12 @@ class GroqClient(LLMClient):
             except Exception as exc:
                 if yielded_any or attempt == _MAX_ATTEMPTS or not _is_retryable(exc):
                     raise
+                wait = _compute_retry_wait(exc, attempt)
                 logger.warning(
-                    "Groq chat_stream() attempt %d/%d failed before any content streamed (%s), retrying...",
-                    attempt, _MAX_ATTEMPTS, exc,
+                    "Groq chat_stream() attempt %d/%d failed before any content streamed (%s), retrying in %.1fs...",
+                    attempt, _MAX_ATTEMPTS, exc, wait,
                 )
-                await asyncio.sleep(_RETRY_BACKOFF_SECONDS * attempt)
+                await asyncio.sleep(wait)
 
     async def is_healthy(self) -> bool:
         try:

@@ -206,7 +206,10 @@ export function OnboardingPage() {
 <script src="${window.location.origin}/widget.js" defer></script>`}
           </pre>
         </div>
-        <Link to="/portal/login" className="mt-6 block text-sm font-semibold underline" style={{ color: ACCENT_TEXT }}>
+        {/* Straight into the portal, not the login form — signup already
+            stored a valid session token above, so sending them to /login
+            made a brand-new client retype the password they'd just set. */}
+        <Link to="/portal" className="mt-6 block text-sm font-semibold underline" style={{ color: ACCENT_TEXT }}>
           Go to your portal to manage this business →
         </Link>
         <button

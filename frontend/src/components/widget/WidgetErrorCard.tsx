@@ -20,7 +20,7 @@ export function WidgetErrorCard({
     <motion.div
       initial={{ opacity: 0, y: 12, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      className="fixed bottom-24 right-6 z-50 w-72 rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl"
+      className="fixed bottom-24 right-6 z-[2147483647] w-72 rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl"
     >
       <button
         type="button"

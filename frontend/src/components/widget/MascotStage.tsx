@@ -74,7 +74,7 @@ export function MascotStage({
   const currentEntry = transcript[transcript.length - 1]
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-center gap-2 sm:bottom-6 sm:right-6">
+    <div className="fixed bottom-4 right-4 z-[2147483647] flex flex-col items-center gap-2 sm:bottom-6 sm:right-6">
       {!connecting && !endMessage && <StageProgress step={stageStep} />}
 
       <div className="flex items-center gap-1.5">

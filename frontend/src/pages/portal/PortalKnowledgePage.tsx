@@ -49,6 +49,9 @@ export function PortalKnowledgePage() {
   }
 
   const handleDelete = async (id: number) => {
+    // The only irreversible thing a client can do in the portal, and it was
+    // a single unguarded click on a small "x" next to each row.
+    if (!window.confirm('Delete this knowledge row? Your bot will stop using it to answer questions.')) return
     setDeletingId(id)
     setDeleteError(null)
     try {

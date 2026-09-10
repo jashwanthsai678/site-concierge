@@ -25,7 +25,7 @@ export function WidgetBubble({
       onClick={onClick}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full shadow-2xl"
+      className="fixed bottom-6 right-6 z-[2147483647] flex h-16 w-16 items-center justify-center overflow-hidden rounded-full shadow-2xl"
       style={{ backgroundColor: ACCENT }}
       aria-label="Talk to us"
     >

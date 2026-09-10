@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/services/api'
+import { Link } from 'react-router-dom'
+import { portalApi } from '@/services/portalApi'
 import { useDashboardSocket } from '@/hooks/useDashboardSocket'
 import { StatTile } from '@/components/dashboard/StatTile'
 import { LeadPipeline } from '@/components/dashboard/LeadPipeline'
@@ -30,35 +31,36 @@ function formatSeconds(seconds: number | null): string {
 export function DashboardPage() {
   const queryClient = useQueryClient()
 
-  const businessQuery = useQuery({ queryKey: ['current-business'], queryFn: api.getCurrentBusiness })
+  // The business comes from the session, not a URL/query param — this page
+  // shows only the logged-in client's own data.
+  const businessQuery = useQuery({ queryKey: ['portal-me'], queryFn: portalApi.getMe })
   const businessId = businessQuery.data?.id ?? null
 
   const { connected: liveUpdatesConnected } = useDashboardSocket(businessId)
 
   const summaryQuery = useQuery({
     queryKey: ['analytics-summary', businessId],
-    queryFn: () => api.getSummary(businessId as number),
+    queryFn: portalApi.getSummary,
     enabled: businessId !== null,
   })
   const funnelQuery = useQuery({
     queryKey: ['analytics-funnel', businessId],
-    queryFn: () => api.getFunnel(businessId as number),
+    queryFn: portalApi.getFunnel,
     enabled: businessId !== null,
   })
   const leadsQuery = useQuery({
     queryKey: ['leads', businessId],
-    queryFn: () => api.listLeads(businessId as number),
+    queryFn: portalApi.listDashboardLeads,
     enabled: businessId !== null,
   })
   const conversationsQuery = useQuery({
     queryKey: ['conversations', businessId],
-    queryFn: () => api.listConversations(businessId as number),
+    queryFn: portalApi.listConversations,
     enabled: businessId !== null,
   })
 
   const handleStatusChange = async (leadId: number, status: LeadRead['status']) => {
-    if (businessId === null) return
-    await api.updateLeadStatus(leadId, businessId, status)
+    await portalApi.updateLeadStatus(leadId, status)
     void queryClient.invalidateQueries({ queryKey: ['leads', businessId] })
     void queryClient.invalidateQueries({ queryKey: ['analytics-pipeline', businessId] })
   }
@@ -73,8 +75,11 @@ export function DashboardPage() {
 
   if (businessQuery.isError || !businessQuery.data) {
     return (
-      <div className="flex h-screen items-center justify-center bg-black text-white/60">
-        No business configured yet — run the seed script.
+      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-black text-white/60">
+        <p>Couldn't load your dashboard — your session may have expired.</p>
+        <Link to="/portal/login" className="font-semibold text-white underline">
+          Sign in again
+        </Link>
       </div>
     )
   }
@@ -148,7 +153,7 @@ export function DashboardPage() {
           ) : conversationsQuery.isError ? (
             <ErrorBanner message="Couldn't load conversation history." onRetry={conversationsQuery.refetch} />
           ) : (
-            <ConversationHistoryList conversations={conversations} businessId={businessId as number} />
+            <ConversationHistoryList conversations={conversations} />
           )}
         </div>
       </div>

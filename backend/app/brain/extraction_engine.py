@@ -25,6 +25,15 @@ Output ONLY the JSON object. No markdown fences, no explanation, no other text."
 
 _RETRY_NUDGE = "Reminder: respond with ONLY the JSON object described above, nothing else."
 
+# Extraction only needs enough context to catch what's NEW this turn — it
+# doesn't need the same 8-message window the conversational reply does
+# (that's genuinely needed for coherence; extraction just needs recency).
+# This runs on every turn, concurrently with the reply, so trimming it
+# directly reduces how fast a conversation burns through Groq's shared
+# per-minute token budget as history grows — the actual mechanism behind
+# "long conversations stop working."
+_EXTRACTION_HISTORY_MESSAGES = 4
+
 
 async def extract(
     llm_client: LLMClient, *, history: list[Message], utterance: str,
@@ -60,7 +69,7 @@ async def extract(
 
 def _build_messages(history: list[Message], utterance: str) -> list[dict]:
     messages: list[dict] = [{"role": "system", "content": _EXTRACTION_SYSTEM_PROMPT}]
-    for m in history:
+    for m in history[-_EXTRACTION_HISTORY_MESSAGES:]:
         messages.append({"role": _ROLE_MAP[m.role], "content": m.content})
     messages.append({"role": "user", "content": utterance})
     return messages

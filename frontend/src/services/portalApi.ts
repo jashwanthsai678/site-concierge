@@ -8,6 +8,7 @@ import type {
   PortalBusinessUpdate,
 } from '@/types/portal'
 import type { LeadRead } from '@/types/lead'
+import type { ConversationRead, DashboardSummary, FunnelCounts, MessageRead } from '@/types/analytics'
 
 const TOKEN_KEY = 'site-concierge-portal-token'
 
@@ -33,7 +34,15 @@ async function portalRequest<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   })
   if (res.status === 401) {
+    // Clearing the token alone left the client stranded: the portal shell
+    // stays mounted while navigating between its pages, so nothing
+    // re-checked auth and every save just failed with "Invalid or expired
+    // session" forever. A hard navigation both redirects and resets all
+    // in-memory query state, which a client-side route change would not.
     portalAuth.clearToken()
+    if (!window.location.pathname.startsWith('/portal/login')) {
+      window.location.assign('/portal/login')
+    }
   }
   if (!res.ok) {
     const body = await res.text().catch(() => '')
@@ -84,6 +93,31 @@ export const portalApi = {
     }),
 
   listLeads: () => portalRequest<LeadRead[]>('/api/portal/leads'),
+
+  // --- Dashboard ---
+  // These used to live in services/api.ts and pass `?business_id=` with no
+  // auth at all, which meant anyone could read any business's leads and
+  // transcripts. They're here now because they share the portal's auth
+  // model: the backend derives the business from this token and ignores
+  // anything the caller claims about which business it is.
+  updateLeadStatus: (leadId: number, status: LeadRead['status']) =>
+    portalRequest<LeadRead>(`/api/leads/${leadId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+
+  listDashboardLeads: () => portalRequest<LeadRead[]>('/api/leads'),
+
+  getSummary: () => portalRequest<DashboardSummary>('/api/analytics/summary'),
+
+  getFunnel: () => portalRequest<FunnelCounts>('/api/analytics/funnel'),
+
+  getPipeline: () => portalRequest<Record<string, number>>('/api/analytics/pipeline'),
+
+  listConversations: () => portalRequest<ConversationRead[]>('/api/conversations'),
+
+  getConversationMessages: (conversationId: number) =>
+    portalRequest<MessageRead[]>(`/api/conversations/${conversationId}/messages`),
 
   uploadMascotImage: (file: File) => {
     const formData = new FormData()

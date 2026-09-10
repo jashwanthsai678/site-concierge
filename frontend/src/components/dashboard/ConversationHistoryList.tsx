@@ -1,15 +1,9 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { api } from '@/services/api'
+import { portalApi } from '@/services/portalApi'
 import type { ConversationRead } from '@/types/analytics'
 
-export function ConversationHistoryList({
-  conversations,
-  businessId,
-}: {
-  conversations: ConversationRead[]
-  businessId: number
-}) {
+export function ConversationHistoryList({ conversations }: { conversations: ConversationRead[] }) {
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
   return (
@@ -32,17 +26,17 @@ export function ConversationHistoryList({
               {c.current_stage.replace('_', ' ')} · {c.status}
             </span>
           </button>
-          {expandedId === c.id && <TranscriptDetail conversationId={c.id} businessId={businessId} />}
+          {expandedId === c.id && <TranscriptDetail conversationId={c.id} />}
         </div>
       ))}
     </div>
   )
 }
 
-function TranscriptDetail({ conversationId, businessId }: { conversationId: number; businessId: number }) {
+function TranscriptDetail({ conversationId }: { conversationId: number }) {
   const { data, isLoading } = useQuery({
     queryKey: ['conversation-messages', conversationId],
-    queryFn: () => api.getConversationMessages(conversationId, businessId),
+    queryFn: () => portalApi.getConversationMessages(conversationId),
   })
 
   if (isLoading) return <p className="px-4 pb-3 text-xs text-white/30">Loading transcript…</p>

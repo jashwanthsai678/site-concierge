@@ -1,6 +1,4 @@
-import type { BusinessPublic, CampaignLandingPage, StartConversationResponse } from '@/types/business'
-import type { LeadRead } from '@/types/lead'
-import type { ConversationRead, DashboardSummary, FunnelCounts, MessageRead } from '@/types/analytics'
+import type { CampaignLandingPage, StartConversationResponse } from '@/types/business'
 import type { BusinessCreatePayload, BusinessOnboardingResponse } from '@/types/onboarding'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -25,34 +23,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// Unauthenticated, public endpoints only. Anything that reads or writes a
+// business's own data (leads, analytics, conversations) lives in
+// portalApi.ts, which attaches the session token — those used to be here,
+// taking a `?business_id=` that nothing verified.
 export const api = {
-  getCurrentBusiness: () => request<BusinessPublic>('/api/business/current'),
-
   getLandingPage: (slug: string) => request<CampaignLandingPage>(`/api/pages/${slug}`),
 
   startConversation: (slug: string) =>
     request<StartConversationResponse>(`/api/pages/${slug}/start`, { method: 'POST' }),
-
-  listLeads: (businessId: number) => request<LeadRead[]>(`/api/leads?business_id=${businessId}`),
-
-  updateLeadStatus: (leadId: number, businessId: number, status: LeadRead['status']) =>
-    request<LeadRead>(`/api/leads/${leadId}/status?business_id=${businessId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    }),
-
-  getSummary: (businessId: number) => request<DashboardSummary>(`/api/analytics/summary?business_id=${businessId}`),
-
-  getFunnel: (businessId: number) => request<FunnelCounts>(`/api/analytics/funnel?business_id=${businessId}`),
-
-  getPipeline: (businessId: number) =>
-    request<Record<string, number>>(`/api/analytics/pipeline?business_id=${businessId}`),
-
-  listConversations: (businessId: number) =>
-    request<ConversationRead[]>(`/api/conversations?business_id=${businessId}`),
-
-  getConversationMessages: (conversationId: number, businessId: number) =>
-    request<MessageRead[]>(`/api/conversations/${conversationId}/messages?business_id=${businessId}`),
 
   createBusiness: (payload: BusinessCreatePayload) =>
     request<BusinessOnboardingResponse>('/api/onboarding/businesses', {

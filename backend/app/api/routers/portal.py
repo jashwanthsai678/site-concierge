@@ -175,7 +175,9 @@ async def trigger_my_ingestion(
     payload: IngestRequest, business: Business = Depends(get_current_business),
 ) -> IngestResponse:
     try:
-        chunk_count = await ingest_business(business.id, website_url=payload.website_url)
+        chunk_count = await ingest_business(
+            business.id, website_url=str(payload.website_url) if payload.website_url else None,
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=503,

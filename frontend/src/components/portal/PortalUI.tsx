@@ -63,18 +63,43 @@ export function PortalButton({
   )
 }
 
+/** The dots-and-label header used by both PreviewFrame (a live phone/
+ * browser-style preview) and the embed snippet's code-editor look — pulled
+ * out once two pages needed the same "window chrome" bar with different
+ * dot colors and an optional action slot (e.g. a copy button). */
+const DEFAULT_DOTS = ['bg-gray-300', 'bg-gray-300', 'bg-gray-300'] as const
+
+export function ChromeBar({
+  label,
+  action,
+  dotClassNames = DEFAULT_DOTS,
+}: {
+  label: string
+  action?: ReactNode
+  /** Exactly 3 dot colors, e.g. the classic red/yellow/green traffic
+   * lights — defaults to neutral gray for a plain "live preview" look. */
+  dotClassNames?: readonly [string, string, string]
+}) {
+  return (
+    <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-2.5">
+      <div className="flex items-center gap-1.5">
+        {dotClassNames.map((dotClass, i) => (
+          <span key={i} className={`h-2.5 w-2.5 rounded-full ${dotClass}`} />
+        ))}
+        <span className="ml-2 text-[11px] font-medium text-gray-400">{label}</span>
+      </div>
+      {action}
+    </div>
+  )
+}
+
 /** A small rounded-rect frame mimicking a phone/browser chrome — used
  * anywhere the portal shows a "this is what visitors actually see"
  * preview, so it reads as a live preview rather than a floating mascot. */
 export function PreviewFrame({ children, label = 'Live preview' }: { children: ReactNode; label?: string }) {
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div className="flex items-center gap-1.5 border-b border-gray-100 bg-gray-50 px-3 py-2">
-        <span className="h-2.5 w-2.5 rounded-full bg-gray-300" />
-        <span className="h-2.5 w-2.5 rounded-full bg-gray-300" />
-        <span className="h-2.5 w-2.5 rounded-full bg-gray-300" />
-        <span className="ml-2 text-[11px] font-medium text-gray-400">{label}</span>
-      </div>
+      <ChromeBar label={label} />
       <div className="flex flex-col items-center justify-end gap-3 bg-gradient-to-b from-gray-50 to-white p-5" style={{ minHeight: 240 }}>
         {children}
       </div>

@@ -1,0 +1,175 @@
+<!doctype html>
+<!--
+  A stand-in for a real client's existing website — deliberately NOT part of
+  this app's React routes, so the embed snippet below is exercised exactly
+  the way a paying client would use it: a plain static page, a different
+  origin, no shared build, no shared CSS.
+
+  Serve it from the repo root with:
+    npx http-server test-sites/generic-business -p 5176 -c-1
+
+  Then register http://localhost:5176 under Portal -> Settings -> Allowed
+  embed origins, or the backend will (correctly) refuse the widget.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Brightpath Study Abroad — Your Global Education Partner</title>
+  <style>
+    :root {
+      --navy: #14263f;
+      --navy-soft: #1e3a5f;
+      --gold: #c8952f;
+      --paper: #fbfaf7;
+      --ink: #2c3440;
+      --muted: #667085;
+      --line: #e4e0d8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, 'Times New Roman', serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.65;
+    }
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--navy);
+      color: #fff;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 40px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.18);
+    }
+    .brand { font-size: 22px; font-weight: 700; letter-spacing: .5px; }
+    .brand span { color: var(--gold); }
+    nav a {
+      color: #dfe6ef; text-decoration: none; margin-left: 28px;
+      font-family: system-ui, sans-serif; font-size: 14px; letter-spacing: .3px;
+    }
+    nav a:hover { color: var(--gold); }
+    .hero {
+      padding: 90px 40px 80px;
+      background: linear-gradient(160deg, var(--navy) 0%, var(--navy-soft) 100%);
+      color: #fff;
+    }
+    .hero-inner { max-width: 780px; margin: 0 auto; text-align: center; }
+    .hero h1 { font-size: 46px; line-height: 1.2; margin: 0 0 20px; }
+    .hero p { font-size: 19px; color: #c9d6e5; margin: 0 0 32px; }
+    .cta {
+      display: inline-block; background: var(--gold); color: var(--navy);
+      padding: 14px 34px; border-radius: 3px; text-decoration: none;
+      font-family: system-ui, sans-serif; font-weight: 700; font-size: 15px;
+    }
+    section { max-width: 1040px; margin: 0 auto; padding: 72px 40px; }
+    h2 { font-size: 32px; margin: 0 0 12px; color: var(--navy); }
+    .lede { color: var(--muted); margin: 0 0 40px; font-size: 17px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px; }
+    .card {
+      background: #fff; border: 1px solid var(--line); border-radius: 4px;
+      padding: 28px;
+    }
+    .card h3 { margin: 0 0 10px; font-size: 20px; color: var(--navy); }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; }
+    .band { background: #fff; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .stats { display: flex; flex-wrap: wrap; gap: 48px; justify-content: center; }
+    .stat { text-align: center; }
+    .stat .n { font-size: 42px; color: var(--gold); font-weight: 700; line-height: 1; }
+    .stat .l { font-family: system-ui, sans-serif; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; }
+    blockquote {
+      margin: 0; font-style: italic; font-size: 17px; color: var(--ink);
+      border-left: 3px solid var(--gold); padding-left: 20px;
+    }
+    blockquote footer { font-style: normal; font-size: 14px; color: var(--muted); margin-top: 12px; font-family: system-ui, sans-serif; }
+    footer.site {
+      background: var(--navy); color: #9fb0c4; padding: 40px;
+      text-align: center; font-family: system-ui, sans-serif; font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Bright<span>path</span></div>
+    <nav>
+      <a href="#destinations">Destinations</a>
+      <a href="#services">Services</a>
+      <a href="#results">Results</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div class="hero-inner">
+      <h1>Study abroad without the guesswork</h1>
+      <p>Fifteen years placing students in the world's best universities — from shortlisting through visa approval.</p>
+      <a class="cta" href="#contact">Book a free consultation</a>
+    </div>
+  </div>
+
+  <section id="destinations">
+    <h2>Where our students go</h2>
+    <p class="lede">Five destinations we know inside out, with university partnerships in each.</p>
+    <div class="grid">
+      <div class="card"><h3>United Kingdom</h3><p>One-year Master's programmes with the fastest route to a return on your investment.</p></div>
+      <div class="card"><h3>Canada</h3><p>Co-op programmes and a PR-friendly post-study work pathway.</p></div>
+      <div class="card"><h3>United States</h3><p>STEM-designated degrees with extended OPT work eligibility.</p></div>
+      <div class="card"><h3>Australia</h3><p>Strong regional incentives and generous post-study work rights.</p></div>
+      <div class="card"><h3>Germany</h3><p>Public universities with little or no tuition for international students.</p></div>
+    </div>
+  </section>
+
+  <div class="band">
+    <section id="results">
+      <div class="stats">
+        <div class="stat"><div class="n">4,200+</div><div class="l">Students placed</div></div>
+        <div class="stat"><div class="n">98%</div><div class="l">Visa success rate</div></div>
+        <div class="stat"><div class="n">15</div><div class="l">Years advising</div></div>
+        <div class="stat"><div class="n">180+</div><div class="l">Partner universities</div></div>
+      </div>
+    </section>
+  </div>
+
+  <section id="services">
+    <h2>What we handle for you</h2>
+    <p class="lede">End to end, so nothing falls through the cracks at the worst possible moment.</p>
+    <div class="grid">
+      <div class="card"><h3>University shortlisting</h3><p>A realistic list matched to your profile, budget and timeline — not a brochure dump.</p></div>
+      <div class="card"><h3>Applications &amp; essays</h3><p>Statement of purpose drafting and full application filing, included.</p></div>
+      <div class="card"><h3>Visa filing</h3><p>Document preparation and mock interviews — the stage most applications actually fail at.</p></div>
+      <div class="card"><h3>Scholarships</h3><p>Merit and need-based funding identified and applied for on your behalf.</p></div>
+    </div>
+  </section>
+
+  <div class="band">
+    <section>
+      <blockquote>
+        They talked me out of two universities I was set on, and they were right — I'd have been paying twice as much for a worse outcome.
+        <footer>— Priya R., MSc Data Science, University of Manchester</footer>
+      </blockquote>
+    </section>
+  </div>
+
+  <section id="contact">
+    <h2>Talk to an advisor</h2>
+    <p class="lede">Consultations are free and there's no obligation. Most students start here.</p>
+    <a class="cta" href="mailto:hello@brightpath.example">hello@brightpath.example</a>
+  </section>
+
+  <footer class="site">
+    &copy; 2026 Brightpath Study Abroad. This is a test page, not a real company.
+  </footer>
+
+  <!-- ============================================================
+       THE EMBED SNIPPET — copied verbatim from Portal -> Embed.
+       Everything above this line is the "client's own website".
+       ============================================================ -->
+  <script>
+    window.SITE_CONCIERGE_CONFIG = {
+      slug: "horizon-overseas-education",
+      apiBase: "http://localhost:8010"
+    };
+  </script>
+  <script src="http://localhost:5173/widget.js" defer></script>
+</body>
+</html>

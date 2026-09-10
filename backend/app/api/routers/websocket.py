@@ -1,10 +1,10 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 from app.api.cors import origin_allowed
-from app.api.deps import get_llm_client, get_knowledge_provider
+from app.api.deps import get_llm_client, get_knowledge_provider, resolve_session_business
 from app.config.settings import get_settings
 from app.conversation.conversation_service import ConversationService
 from app.conversation.greeting_service import build_greeting
@@ -134,24 +134,38 @@ async def _handle_turn(conversation_id: int, utterance: str) -> None:
 
 
 @router.websocket("/ws/dashboard")
-async def dashboard_ws(websocket: WebSocket) -> None:
-    # This is the operator-facing dashboard (not the client portal), meant
-    # to be opened from this app's own frontend only — it fans out every
-    # business's live lead updates (name/phone/email/budget/etc.), so it
-    # must NOT accept a connection claiming to come from an arbitrary
-    # origin. This checks the same trusted-origin list the app-wide static
-    # CORSMiddleware uses for everything else, since this socket isn't
-    # per-business the way the widget/conversation origin check is.
+async def dashboard_ws(websocket: WebSocket, token: str = Query(default="")) -> None:
+    """Live lead updates for ONE business's dashboard.
+
+    Two gates, and both are needed. The origin check keeps the socket from
+    being opened by an arbitrary site; the session token is what decides
+    *whose* leads this connection is allowed to receive. Origin alone was
+    not enough — it let any page on the app's own origin subscribe to every
+    business's lead PII, which is exactly what a logged-in client's browser
+    is. The token rides in a query param because browsers cannot set an
+    Authorization header on a WebSocket handshake.
+    """
     origin = websocket.headers.get("origin")
     if origin not in get_settings().cors_origins:
         await websocket.close(code=4403)
         return
 
-    await connection_manager.connect_dashboard(websocket)
+    if not token:
+        await websocket.close(code=4401)
+        return
+
+    async with async_session_factory() as db:
+        business = await resolve_session_business(db, token)
+    if business is None:
+        await websocket.close(code=4401)
+        return
+    business_id = business.id
+
+    await connection_manager.connect_dashboard(business_id, websocket)
     try:
         while True:
             await websocket.receive_text()  # dashboard is receive-only; drain and ignore
     except WebSocketDisconnect:
         pass
     finally:
-        connection_manager.disconnect_dashboard(websocket)
+        connection_manager.disconnect_dashboard(business_id, websocket)

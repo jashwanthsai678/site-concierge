@@ -23,9 +23,24 @@ export default defineConfig({
   define: {
     'process.env.NODE_ENV': JSON.stringify('production'),
   },
+  // Nothing in public/ belongs in the widget bundle (mascot images are
+  // fetched over the network from `assetBase`, not bundled), and leaving
+  // this on would make Vite refuse the outDir below for overlapping with
+  // the public dir.
+  publicDir: false,
   build: {
-    outDir: 'dist-widget',
-    emptyOutDir: true,
+    // Emitted straight into the SPA's public/ so `/widget.js` resolves on
+    // the app's own origin — which is exactly what the embed snippet the
+    // portal hands a client points at (PortalEmbedPage.tsx). Previously
+    // this built to dist-widget/, which nothing ever served, so the
+    // copy-paste snippet 404'd in dev and only worked in production if
+    // whoever deployed remembered to move the file by hand. public/ is
+    // copied verbatim into dist/ by the SPA build, so one `npm run build`
+    // now produces a dist/ that serves both the app and the widget.
+    outDir: 'public',
+    // public/ holds real committed source assets (favicon, mascot art) —
+    // wiping it on every widget build would delete them.
+    emptyOutDir: false,
     cssCodeSplit: false,
     lib: {
       entry: path.resolve(__dirname, 'src/widget-embed.tsx'),

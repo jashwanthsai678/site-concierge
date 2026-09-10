@@ -23,6 +23,36 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+async def resolve_session_business(db: AsyncSession, token: str) -> Business | None:
+    """Token -> Business, or None if the token is unknown/expired. Split out
+    of `get_current_business` because WebSocket handlers can't use FastAPI's
+    header injection (browsers can't set headers on a WS handshake), so
+    /ws/dashboard authenticates the same session token off a query param —
+    and must apply exactly the same expiry rules, not a second copy of them
+    that can drift.
+    """
+    session = (
+        await db.execute(select(BusinessSession).where(BusinessSession.token == token))
+    ).scalar_one_or_none()
+    if session is None:
+        return None
+
+    # Sessions used to never expire at all. SQLite doesn't preserve tzinfo
+    # across a round trip even with DateTime(timezone=True), so `expires_at`
+    # can come back naive here — normalize both sides to naive UTC for the
+    # comparison rather than assume the driver's behavior.
+    expires_at = session.expires_at
+    now = utcnow()
+    if expires_at.tzinfo is None:
+        now = now.replace(tzinfo=None)
+    if expires_at < now:
+        await db.delete(session)
+        await db.commit()
+        return None
+
+    return await db.get(Business, session.business_id)
+
+
 async def get_current_business(
     authorization: str | None = Header(default=None), db: AsyncSession = Depends(get_db),
 ) -> Business:
@@ -37,26 +67,7 @@ async def get_current_business(
         raise HTTPException(status_code=401, detail="Missing or malformed Authorization header.")
     token = authorization.removeprefix("Bearer ").strip()
 
-    session = (
-        await db.execute(select(BusinessSession).where(BusinessSession.token == token))
-    ).scalar_one_or_none()
-    if session is None:
-        raise HTTPException(status_code=401, detail="Invalid or expired session.")
-
-    # Sessions used to never expire at all. SQLite doesn't preserve tzinfo
-    # across a round trip even with DateTime(timezone=True), so `expires_at`
-    # can come back naive here — normalize both sides to naive UTC for the
-    # comparison rather than assume the driver's behavior.
-    expires_at = session.expires_at
-    now = utcnow()
-    if expires_at.tzinfo is None:
-        now = now.replace(tzinfo=None)
-    if expires_at < now:
-        await db.delete(session)
-        await db.commit()
-        raise HTTPException(status_code=401, detail="Invalid or expired session.")
-
-    business = await db.get(Business, session.business_id)
+    business = await resolve_session_business(db, token)
     if business is None:
         raise HTTPException(status_code=401, detail="Invalid or expired session.")
     return business

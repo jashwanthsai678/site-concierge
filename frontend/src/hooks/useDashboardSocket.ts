@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { portalAuth } from '@/services/portalApi'
 import type { DashboardLeadUpdateData, WSEnvelope } from '@/types/conversation'
 
 const MAX_RECONNECT_DELAY_MS = 15_000
@@ -28,7 +29,14 @@ export function useDashboardSocket(businessId: number | null): { connected: bool
 
     const connect = () => {
       const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-      const socket = new WebSocket(`${protocol}://${window.location.host}/ws/dashboard`)
+      // The token decides which business's lead updates this socket
+      // receives. It goes in the query string because a browser can't set
+      // an Authorization header on a WebSocket handshake.
+      const token = portalAuth.getToken()
+      if (!token) return
+      const socket = new WebSocket(
+        `${protocol}://${window.location.host}/ws/dashboard?token=${encodeURIComponent(token)}`,
+      )
       ws = socket
 
       socket.onopen = () => {

@@ -146,6 +146,7 @@ class TurnOrchestrator:
         }
         await self._connections.send_to_conversation(conversation.id, ServerEventType.LEAD_UPDATE, lead_payload)
         await self._connections.broadcast_dashboard(
+            business.id,
             ServerEventType.LEAD_UPDATE,
             {**lead_payload, "lead_id": lead.id, "business_id": business.id, "conversation_id": conversation.id},
         )

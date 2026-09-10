@@ -13,6 +13,10 @@ dist-widget
 dist-ssr
 *.local
 
+# Build output of vite.widget.config.ts — emitted into public/ so the SPA
+# serves it at /widget.js, but it's a build artifact, not a source asset.
+public/widget.js
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

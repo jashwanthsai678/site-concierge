@@ -23,3 +23,32 @@ body {
   color: var(--color-ink);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
+
+/* Keyboard-only focus ring, applied globally — previously every button/
+   link/input relied on whatever the browser's own default outline happens
+   to be (inconsistent across browsers, and invisible on some dark
+   surfaces). `:focus-visible` (not `:focus`) so this only shows up for
+   keyboard navigation, not every mouse click. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* `:host` only matches when this stylesheet is injected inside a shadow
+   root (widget-embed.tsx) — a no-op everywhere else, including the main
+   app, where no element is ever a shadow host. Shadow DOM stops the HOST
+   PAGE's selectors from reaching in, but it does NOT stop inherited CSS
+   properties (font-family, color, line-height, letter-spacing, etc.) from
+   crossing the boundary — a client's own site sets those on `html`/`body`,
+   and without this reset the widget would silently render in whatever
+   font/color the host page happens to use instead of its own design.
+   `all: initial` cuts that inheritance; the explicit declarations after it
+   restore sane, self-contained defaults so nothing downstream depends on
+   the host page at all. */
+:host {
+  all: initial;
+  display: block;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--color-ink);
+  line-height: normal;
+}

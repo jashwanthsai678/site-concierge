@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.knowledge import KnowledgeCategory
 
@@ -95,7 +95,11 @@ class BusinessOnboardingResponse(BaseModel):
 
 class KnowledgeItemCreate(BaseModel):
     category: KnowledgeCategory
-    content: str
+    # No cap here previously — unlike every other free-text field in this
+    # file. A single row feeds directly into the RAG chunker/LLM prompt, so
+    # an unbounded one is a cost/DoS vector the same way an unbounded
+    # visitor utterance was (see max_utterance_chars in config/settings.py).
+    content: str = Field(max_length=5000)
     question: str | None = Field(default=None, max_length=300)
 
 
@@ -104,7 +108,11 @@ class KnowledgeBulkCreate(BaseModel):
 
 
 class IngestRequest(BaseModel):
-    website_url: str | None = None
+    # AnyHttpUrl (not a bare str) rejects garbage input before it ever
+    # reaches the crawler — website_crawler.py's own _is_public_host check
+    # still does the real SSRF-relevant validation (this only rejects
+    # malformed input, not private IPs, which aren't invalid URLs).
+    website_url: AnyHttpUrl | None = None
 
 
 class IngestResponse(BaseModel):
@@ -147,4 +155,4 @@ class KnowledgeItemRead(BaseModel):
 class KnowledgeItemUpdate(BaseModel):
     category: KnowledgeCategory | None = None
     question: str | None = Field(default=None, max_length=300)
-    content: str | None = None
+    content: str | None = Field(default=None, max_length=5000)

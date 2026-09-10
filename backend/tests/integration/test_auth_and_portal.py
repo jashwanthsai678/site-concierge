@@ -151,6 +151,29 @@ async def test_portal_knowledge_add_list_update_delete_round_trip(db_session: As
     assert final_list == []
 
 
+async def test_portal_knowledge_add_rejects_oversized_content(db_session: AsyncSession):
+    await _seed_business(db_session)
+    client = _make_client(db_session)
+    token = await _login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/portal/knowledge", headers=headers,
+        json={"items": [{"category": "faq", "content": "a" * 5001}]},
+    )
+    assert response.status_code == 422
+
+
+async def test_portal_ingest_rejects_a_malformed_website_url(db_session: AsyncSession):
+    await _seed_business(db_session)
+    client = _make_client(db_session)
+    token = await _login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post("/api/portal/ingest", headers=headers, json={"website_url": "not-a-url"})
+    assert response.status_code == 422
+
+
 async def test_portal_knowledge_cannot_touch_another_businesss_item(db_session: AsyncSession):
     business_a = await _seed_business(db_session, slug="biz-a", email="a@example.com")
     await _seed_business(db_session, slug="biz-b", email="b@example.com", password="different-password")
