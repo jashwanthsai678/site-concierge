@@ -58,9 +58,11 @@ Best suited to **high-consideration, trust-sensitive purchases**, where a conver
 
 **Explicitly out of scope:** e-commerce and retail (a distinct, well-served category), low-consideration high-volume purchases, and any use requiring regulated advice rather than intake.
 
-### Cost model
+### Model and voice providers
 
-Voice runs entirely on the browser's native Web Speech API, and reasoning runs on a low-cost hosted LLM route. There is close to zero marginal cost per conversation, which is what makes pricing for smaller businesses viable rather than enterprise-only.
+Both the language model and the voice layer are deployment choices, not fixed architectural commitments. The conversation engine talks to a single `LLMClient` interface (`brain/interfaces.py`); adding a provider means implementing that interface, and nothing in `conversation/`, `crm/` or `knowledge/` imports a provider SDK directly. Voice is likewise isolated behind the `useSpeechRecognition` and `useSpeechSynthesis` hooks.
+
+The current configuration — Groq's `openai/gpt-oss-20b` and the browser's native Web Speech API — is what the project is being **developed and tested against**. It keeps iteration fast and free, but it is not the intended ceiling on quality. A deployment serving a client who needs stronger reasoning or a more natural voice is expected to run a premium model and a paid TTS provider; the choice belongs to the engagement, weighed against what that client is paying and how demanding their conversations are.
 
 **Unvalidated assumption:** whether voice-as-default converts better than text is not yet proven. The voice/text toggle exists specifically because that question is still open.
 
@@ -84,9 +86,9 @@ Voice runs entirely on the browser's native Web Speech API, and reasoning runs o
 | Backend | Python 3.10+, FastAPI 0.115, SQLAlchemy 2.0 (async), Pydantic 2 |
 | Database | SQLite via `aiosqlite` (development) |
 | Vector store | Qdrant, with local `fastembed` embeddings |
-| LLM | Groq (`openai/gpt-oss-20b`) over the OpenAI-compatible Chat Completions API |
+| LLM | Pluggable behind `LLMClient` — currently Groq (`openai/gpt-oss-20b`) over the OpenAI-compatible Chat Completions API |
 | Frontend | React 19, TypeScript 6, Vite 8, Tailwind CSS 4, TanStack Query 5, React Router 7 |
-| Voice | Browser-native Web Speech API (`SpeechRecognition` / `SpeechSynthesis`) |
+| Voice | Pluggable — currently the browser-native Web Speech API (`SpeechRecognition` / `SpeechSynthesis`) |
 | Realtime | Native WebSockets |
 | Testing | pytest with `pytest-asyncio` — 100 tests |
 
@@ -337,4 +339,4 @@ pytest
 | **Tier 3** | Voice selection, additional mascots, billing, CRM integrations |
 | **Tier 4** | Monitoring, error tracking and backups |
 
-Open questions that need a decision rather than more code: hosting platform, Groq tier versus a fallback provider, and whether to keep free browser TTS or adopt a paid voice provider.
+Open questions that need a decision rather than more code: the hosting platform, and which model and voice providers to offer per client tier — the current Groq and browser-TTS configuration is the development default, and supporting a premium tier means adding an `LLMClient` implementation and a TTS adapter, not restructuring the engine.

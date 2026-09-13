@@ -91,13 +91,18 @@ Things that make the software better without requiring hosting/a real DB:
 - **Secrets management.** `backend/.env` works for local dev because it's
   gitignored. Production needs a real secrets manager (whatever the
   hosting platform provides), not a `.env` file sitting on a server.
-- **LLM provider reliability at real load.** Now on Groq
-  (`openai/gpt-oss-20b`) rather than TokenRouter — measured live this
-  session: the free tier's ~8,000 tokens/minute cap gets hit after
-  roughly 10 rapid-fire conversational turns (mitigated some via
-  `reasoning_effort=low` + a completion-token cap, not eliminated). Decide:
-  upgrade to a paid Groq tier, add a fallback provider, or accept this
-  ceiling for now.
+- **Pick the model tier a paying client actually runs on.** The current
+  Groq free tier (`openai/gpt-oss-20b`) is the *development* configuration,
+  not a commitment: measured live, its ~8,000 tokens/minute cap is hit
+  after roughly 10 rapid-fire turns (mitigated via `reasoning_effort=low`,
+  a completion-token cap, trimmed extraction history and rate-limit-aware
+  retry — so conversations slow down rather than fail, but the ceiling is
+  still there). A real client engagement is expected to run a stronger,
+  paid model where the conversation quality justifies it. Because
+  everything goes through the `LLMClient` interface, that is a new
+  implementation plus config, not an engine change. What's needed is the
+  commercial decision — which tier for which client — and then a way to
+  select the provider per business rather than globally in `api/deps.py`.
 
 ## Tier 2 — Security hardening before onboarding real (non-pilot) customers
 
@@ -123,10 +128,14 @@ Things that make the software better without requiring hosting/a real DB:
 
 ## Tier 3 — Product features still missing
 
-- **Voice selection** — deliberately not built. Blocked on a real
-  decision: keep free/inconsistent browser `SpeechSynthesis`, or move to a
-  paid provider (ElevenLabs-tier), which reintroduces per-conversation
-  cost. Needs that decision before the picker UI is worth building.
+- **Voice selection + a paid TTS adapter** — deliberately not built yet.
+  Browser `SpeechSynthesis` is the development default: free, but its
+  voices vary by OS/browser and can't be chosen per business. Serving a
+  client who wants a specific, consistent voice means adding a TTS adapter
+  (ElevenLabs-tier) alongside the existing hook, which carries real
+  per-conversation cost — priced into that client's plan rather than
+  absorbed. The picker UI is worth building once there's a second voice
+  source to pick from.
 - **More mascot characters** — a business can now upload their own custom
   mascot image (portal → Bot Setup), which covers "I want MY character,"
   but there's still only one built-in pre-made character to choose from
@@ -151,7 +160,7 @@ Things that make the software better without requiring hosting/a real DB:
    hosting decision, matching the current "perfect it locally first"
    direction.
 2. When told to move toward production: decide + provision hosting,
-   Postgres, and the Groq tier question (these three block everything
+   Postgres, and the model-tier question (these three block everything
    else in Tier 1).
 3. Alembic migrations, so the schema stops being hand-patched.
 4. Deploy to a real domain; update `cors_origins`/`DEFAULT_API_BASE`/embed
@@ -161,8 +170,10 @@ Things that make the software better without requiring hosting/a real DB:
 ## Open decisions that need a person, not more code
 
 - Which hosting platform (affects the deployment step directly)?
-- Groq: upgrade tier, add a fallback provider, or accept the current
-  reliability ceiling for now?
-- Voice: free browser TTS forever, or pay for a real voice provider?
+- Which model tier does a paying client run on, and does provider/model
+  become a per-business setting rather than one global choice in
+  `api/deps.py`? (The free Groq tier is the dev default, not the product.)
+- Same question for voice: which clients get a paid TTS voice, and how is
+  that cost carried in their plan?
 - When is "perfect enough, locally" — i.e., what does "done observing it"
   actually look like before greenlighting Tier 1?
