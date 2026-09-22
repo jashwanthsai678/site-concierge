@@ -1,8 +1,14 @@
-# Qualeadio
+<p align="center">
+  <img src="frontend/public/brand/qualeadio-logo-960.png" alt="Qualeadio — AI Sales Concierge for Your Website" width="480">
+</p>
 
-**Turn website conversations into qualified leads.**
+<h1 align="center">Turn website conversations into qualified leads.</h1>
 
-An embeddable AI sales concierge that qualifies website visitors through real voice or text conversation, and turns them into scored leads in real time.
+<p align="center">
+  An embeddable AI sales concierge that qualifies website visitors through real voice or text conversation, and turns them into scored leads in real time.
+</p>
+
+---
 
 Qualeadio is a multi-tenant SaaS platform. A business signs up, describes its persona, supplies the knowledge its assistant may use, and pastes a two-line `<script>` snippet onto its existing website. From then on the widget engages visitors who show genuine interest, holds a structured sales conversation grounded in that business's own content, and delivers qualified, scored leads to a live dashboard.
 

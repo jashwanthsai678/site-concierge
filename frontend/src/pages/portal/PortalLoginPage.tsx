@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { portalApi, portalAuth } from '@/services/portalApi'
-import { ACCENT, ACCENT_STRONG } from '@/lib/palette'
+import { ACCENT_STRONG } from '@/lib/palette'
 import { INPUT_CLASS } from '@/lib/formStyles'
 import { Field } from '@/components/common/Field'
 import { PortalButton } from '@/components/portal/PortalUI'
-import { BotIcon, SparkIcon } from '@/components/portal/icons'
+import { SparkIcon } from '@/components/portal/icons'
 
 export function PortalLoginPage() {
   const navigate = useNavigate()
@@ -44,8 +44,11 @@ export function PortalLoginPage() {
           style={{ background: 'radial-gradient(circle, white, transparent 70%)' }}
         />
 
-        <div className="relative flex items-center gap-2 text-sm font-semibold tracking-wide">
-          <BotIcon className="h-6 w-6" />
+        {/* The icon mark rather than the wordmark: the wordmark is navy on
+            navy here, whereas the mark's white bubble and green bars read
+            cleanly against the panel. */}
+        <div className="relative flex items-center gap-2.5 text-sm font-semibold tracking-wide">
+          <img src="/brand/qualeadio-icon-192.png" alt="" className="h-8 w-8 rounded-lg" />
           Qualeadio
         </div>
 
@@ -64,10 +67,14 @@ export function PortalLoginPage() {
 
       <div className="flex flex-1 items-center justify-center px-6">
         <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-5">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900 lg:hidden">
-            <BotIcon className="h-6 w-6" style={{ color: ACCENT }} />
-            Qualeadio
-          </div>
+          {/* The tagline-free lockup: the full logo's strapline is unreadable
+              below ~80px tall. Light side only — that strapline and the
+              wordmark are navy, which would vanish on the dark panel. */}
+          <img
+            src="/brand/qualeadio-wordmark-240.png"
+            alt="Qualeadio"
+            className="mb-3 h-8 w-auto lg:hidden"
+          />
 
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
