@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="frontend/public/brand/qualeadio-logo-960.png" alt="Qualeadio — AI Sales Concierge for Your Website" width="480">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="frontend/public/brand/qualeadio-logo-dark-960.png">
+    <img src="frontend/public/brand/qualeadio-logo-960.png" alt="Qualeadio — AI Sales Concierge for Your Website" width="480">
+  </picture>
 </p>
 
 <h1 align="center">Turn website conversations into qualified leads.</h1>
