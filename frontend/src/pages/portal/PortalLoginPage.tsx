@@ -46,7 +46,7 @@ export function PortalLoginPage() {
 
         <div className="relative flex items-center gap-2 text-sm font-semibold tracking-wide">
           <BotIcon className="h-6 w-6" />
-          Site Concierge
+          Qualeadio
         </div>
 
         <div className="relative max-w-sm">
@@ -59,14 +59,14 @@ export function PortalLoginPage() {
           </p>
         </div>
 
-        <p className="relative text-xs text-white/40">© {new Date().getFullYear()} Site Concierge</p>
+        <p className="relative text-xs text-white/40">© {new Date().getFullYear()} Qualeadio</p>
       </div>
 
       <div className="flex flex-1 items-center justify-center px-6">
         <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-5">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900 lg:hidden">
             <BotIcon className="h-6 w-6" style={{ color: ACCENT }} />
-            Site Concierge
+            Qualeadio
           </div>
 
           <div>

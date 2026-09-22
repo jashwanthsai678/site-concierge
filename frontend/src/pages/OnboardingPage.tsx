@@ -198,7 +198,7 @@ export function OnboardingPage() {
           </p>
           <pre className="mt-2 overflow-x-auto rounded-lg bg-gray-900 p-3 text-[11px] leading-relaxed text-gray-100">
 {`<script>
-  window.SITE_CONCIERGE_CONFIG = {
+  window.QUALEADIO_CONFIG = {
     slug: "${result.slug}",
     apiBase: "${DEFAULT_API_BASE}"
   };

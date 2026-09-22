@@ -23,7 +23,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Site Concierge", lifespan=lifespan)
+app = FastAPI(title="Qualeadio", lifespan=lifespan)
 
 # Uploaded mascot images (see api/routers/portal.py's mascot-image
 # endpoints) — served as plain static files. Cross-origin <img src="...">

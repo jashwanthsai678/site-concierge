@@ -6,7 +6,7 @@ import widgetCss from '@/index.css?inline'
 
 declare global {
   interface Window {
-    SITE_CONCIERGE_CONFIG?: { slug: string; apiBase: string }
+    QUALEADIO_CONFIG?: { slug: string; apiBase: string }
   }
 }
 
@@ -23,7 +23,7 @@ const SCRIPT_ORIGIN = (() => {
 
 // The actual embeddable script a client pastes onto their own site:
 //
-//   <script>window.SITE_CONCIERGE_CONFIG = { slug: "acme-fitness", apiBase: "https://api.yourapp.com" };</script>
+//   <script>window.QUALEADIO_CONFIG = { slug: "acme-fitness", apiBase: "https://api.yourapp.com" };</script>
 //   <script src="https://yourapp.com/widget.js" defer></script>
 //
 // A config global (not `document.currentScript` / a data-* attribute on
@@ -39,9 +39,9 @@ const SCRIPT_ORIGIN = (() => {
 // root; a normal <link>/<style> at the document level would never be seen
 // by shadow DOM content at all.
 async function mount() {
-  const config = window.SITE_CONCIERGE_CONFIG
+  const config = window.QUALEADIO_CONFIG
   if (!config?.slug || !config?.apiBase) {
-    console.error('[SiteConcierge] window.SITE_CONCIERGE_CONFIG with { slug, apiBase } must be set before this script loads.')
+    console.error('[Qualeadio] window.QUALEADIO_CONFIG with { slug, apiBase } must be set before this script loads.')
     return
   }
   const apiBase = config.apiBase.replace(/\/$/, '')
@@ -50,12 +50,12 @@ async function mount() {
   try {
     ;({ business } = await getWidgetConfig(apiBase, config.slug))
   } catch (err) {
-    console.error('[SiteConcierge] failed to load widget config:', err)
+    console.error('[Qualeadio] failed to load widget config:', err)
     return
   }
 
   const host = document.createElement('div')
-  host.id = 'site-concierge-widget-host'
+  host.id = 'qualeadio-widget-host'
   // Appended as a sibling of <body> (under <html>), NOT inside it. A
   // `position: fixed` descendant is positioned relative to the nearest
   // ancestor that establishes a containing block (any ancestor with a

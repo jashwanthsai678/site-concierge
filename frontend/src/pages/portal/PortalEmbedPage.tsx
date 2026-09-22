@@ -10,7 +10,7 @@ export function PortalEmbedPage() {
   const [copied, setCopied] = useState(false)
 
   const snippet = `<script>
-  window.SITE_CONCIERGE_CONFIG = {
+  window.QUALEADIO_CONFIG = {
     slug: "${business.slug}",
     apiBase: "${DEFAULT_API_BASE}"
   };

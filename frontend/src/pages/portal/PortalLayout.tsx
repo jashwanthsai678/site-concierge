@@ -145,7 +145,7 @@ function SidebarContent({
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-gray-900">{business.name}</p>
-          <p className="truncate text-[11px] text-gray-400">Site Concierge Portal</p>
+          <p className="truncate text-[11px] text-gray-400">Qualeadio Portal</p>
         </div>
       </div>
 

@@ -44,7 +44,7 @@ export default defineConfig({
     cssCodeSplit: false,
     lib: {
       entry: path.resolve(__dirname, 'src/widget-embed.tsx'),
-      name: 'SiteConciergeWidget',
+      name: 'QualeadioWidget',
       formats: ['iife'],
       fileName: () => 'widget.js',
     },

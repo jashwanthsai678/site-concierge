@@ -10,7 +10,7 @@ import type {
 import type { LeadRead } from '@/types/lead'
 import type { ConversationRead, DashboardSummary, FunnelCounts, MessageRead } from '@/types/analytics'
 
-const TOKEN_KEY = 'site-concierge-portal-token'
+const TOKEN_KEY = 'qualeadio-portal-token'
 
 export const portalAuth = {
   getToken: () => localStorage.getItem(TOKEN_KEY),

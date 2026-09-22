@@ -1,8 +1,10 @@
-# Site Concierge
+# Qualeadio
 
-**An embeddable AI sales concierge that qualifies website visitors through real voice or text conversation, and turns them into scored leads in real time.**
+**Turn website conversations into qualified leads.**
 
-Site Concierge is a multi-tenant SaaS platform. A business signs up, describes its persona, supplies the knowledge its assistant may use, and pastes a two-line `<script>` snippet onto its existing website. From then on the widget engages visitors who show genuine interest, holds a structured sales conversation grounded in that business's own content, and delivers qualified, scored leads to a live dashboard.
+An embeddable AI sales concierge that qualifies website visitors through real voice or text conversation, and turns them into scored leads in real time.
+
+Qualeadio is a multi-tenant SaaS platform. A business signs up, describes its persona, supplies the knowledge its assistant may use, and pastes a two-line `<script>` snippet onto its existing website. From then on the widget engages visitors who show genuine interest, holds a structured sales conversation grounded in that business's own content, and delivers qualified, scored leads to a live dashboard.
 
 > **Project status:** feature-complete for local development and verified end to end against a local stack. Not yet deployed — everything currently runs against `localhost` with SQLite. See [PRODUCTION_ROADMAP.md](PRODUCTION_ROADMAP.md) for the prioritized path to a production launch.
 
@@ -30,7 +32,7 @@ Site Concierge is a multi-tenant SaaS platform. A business signs up, describes i
 
 Most website visitors leave with unanswered questions and no practical way to ask them. A contact form is usually the only option, and most people never complete one. The existing alternatives are a static chatbot that answers FAQs without moving anyone toward a decision, or an enterprise sales-engagement platform priced well beyond what a small or mid-sized business can justify.
 
-Site Concierge targets the gap between those two: companies with real websites and real prospects, who need conversation to close business but cannot fund an enterprise deployment.
+Qualeadio targets the gap between those two: companies with real websites and real prospects, who need conversation to close business but cannot fund an enterprise deployment.
 
 ### Design philosophy
 
@@ -197,7 +199,7 @@ Any onboarded business can install the widget on its own site — WordPress, Sho
 
 ```html
 <script>
-  window.SITE_CONCIERGE_CONFIG = { slug: "acme-fitness", apiBase: "https://api.yourapp.com" };
+  window.QUALEADIO_CONFIG = { slug: "acme-fitness", apiBase: "https://api.yourapp.com" };
 </script>
 <script src="https://yourapp.com/widget.js" defer></script>
 ```

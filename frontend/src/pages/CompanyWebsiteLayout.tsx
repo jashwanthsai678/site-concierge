@@ -92,7 +92,7 @@ export function CompanyWebsiteLayout() {
           © {new Date().getFullYear()} {business.name}. All rights reserved.
         </footer>
 
-        <SiteConciergeWidget
+        <QualeadioWidget
           slug={slug}
           businessName={business.name}
           mascotKey={business.mascot_key}
@@ -110,7 +110,7 @@ export function CompanyWebsiteLayout() {
  * ancestor) can be called here rather than in CompanyWebsiteLayout itself —
  * that component renders the HighlightProvider, so it can't also consume it.
  */
-function SiteConciergeWidget(props: {
+function QualeadioWidget(props: {
   slug: string
   businessName: string
   mascotKey: string

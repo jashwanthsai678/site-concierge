@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     groq_model: str = "openai/gpt-oss-20b"
     groq_request_timeout_seconds: float = 60.0
 
-    database_url: str = f"sqlite+aiosqlite:///{BASE_DIR / 'ai_conversion_os.db'}"
+    database_url: str = f"sqlite+aiosqlite:///{BASE_DIR / 'qualeadio.db'}"
 
     cors_origins: list[str] = [
         "http://localhost:5173",

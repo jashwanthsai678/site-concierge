@@ -95,7 +95,7 @@ export function DashboardPage() {
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">{businessQuery.data.name}</h1>
-            <p className="text-sm text-white/50">Site Concierge — live dashboard</p>
+            <p className="text-sm text-white/50">Qualeadio — live dashboard</p>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-white/50">
             <span
