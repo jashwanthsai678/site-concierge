@@ -50,7 +50,17 @@ async function mount() {
   try {
     ;({ business } = await getWidgetConfig(apiBase, config.slug))
   } catch (err) {
-    console.error('[Qualeadio] failed to load widget config:', err)
+    // The console is the only place a failed install shows up — the widget
+    // just doesn't render — so say what went wrong and what to do, rather
+    // than dumping an opaque fetch error. The backend's 403 now carries a
+    // CORS header specifically so its message survives to be read here.
+    const reason = err instanceof Error ? err.message : String(err)
+    console.error(
+      `[Qualeadio] Widget did not load: ${reason}\n` +
+        `  site:    ${window.location.origin}\n` +
+        `  slug:    ${config.slug}\n` +
+        `  apiBase: ${apiBase}`,
+    )
     return
   }
 

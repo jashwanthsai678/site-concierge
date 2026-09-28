@@ -19,6 +19,21 @@ export const portalAuth = {
   isLoggedIn: () => Boolean(localStorage.getItem(TOKEN_KEY)),
 }
 
+/**
+ * FastAPI reports a rejected field as `detail: [{ msg, loc }, ...]`, not a
+ * string. That shape previously fell through to the generic
+ * "Request to /api/... failed (422)", hiding messages written specifically
+ * to tell the client what to fix — e.g. which embed origin is malformed.
+ */
+function readableDetail(detail: unknown): string | null {
+  if (typeof detail === 'string') return detail
+  if (!Array.isArray(detail)) return null
+  const messages = detail
+    .map((item) => (typeof item?.msg === 'string' ? item.msg.replace(/^Value error,\s*/, '') : null))
+    .filter((m): m is string => Boolean(m))
+  return messages.length ? messages.join(' ') : null
+}
+
 async function portalRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const token = portalAuth.getToken()
   // FormData (file uploads) must NOT get an explicit Content-Type — the
@@ -53,7 +68,7 @@ async function portalRequest<T>(path: string, init?: RequestInit): Promise<T> {
         return undefined
       }
     })()
-    throw new Error(typeof detail === 'string' ? detail : `Request to ${path} failed (${res.status}): ${body}`)
+    throw new Error(readableDetail(detail) ?? `Request to ${path} failed (${res.status}): ${body}`)
   }
   return res.status === 204 ? (undefined as T) : (res.json() as Promise<T>)
 }

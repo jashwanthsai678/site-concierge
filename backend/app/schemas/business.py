@@ -1,6 +1,7 @@
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, EmailStr, Field
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.models.knowledge import KnowledgeCategory
+from app.utils.origins import normalize_origins
 
 
 class BusinessPublic(BaseModel):
@@ -82,6 +83,11 @@ class BusinessCreate(BaseModel):
     # real embed on an external site yet.
     allowed_origins: list[str] = Field(default_factory=list)
 
+    @field_validator("allowed_origins")
+    @classmethod
+    def _canonicalize_origins(cls, value: list[str]) -> list[str]:
+        return normalize_origins(value)
+
 
 class BusinessOnboardingResponse(BaseModel):
     business: BusinessPublic
@@ -140,6 +146,11 @@ class PortalBusinessUpdate(BaseModel):
     mascot_key: str | None = Field(default=None, max_length=50)
     mascot_energy: str | None = Field(default=None, max_length=20)
     allowed_origins: list[str] | None = None
+
+    @field_validator("allowed_origins")
+    @classmethod
+    def _canonicalize_origins(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else normalize_origins(value)
 
 
 class KnowledgeItemRead(BaseModel):

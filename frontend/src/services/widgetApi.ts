@@ -8,9 +8,17 @@ import type { BusinessPublic, StartConversationResponse } from '@/types/business
 // /api/pages/* (built for the ad-simulator demo's Campaign concept).
 
 async function widgetRequest<T>(apiBase: string, path: string, init?: RequestInit): Promise<T> {
+  // Content-Type only when there is actually a body. Sending it on a
+  // bodyless GET/POST makes the request non-simple, which costs a CORS
+  // preflight round-trip on every widget load for no benefit — and a
+  // preflight failure surfaces as an opaque "Failed to fetch" that hides
+  // the server's real explanation.
   const res = await fetch(`${apiBase}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
     ...init,
+    headers: {
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init?.headers ?? {}),
+    },
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')
