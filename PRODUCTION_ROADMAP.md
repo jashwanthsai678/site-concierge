@@ -59,6 +59,17 @@ Things that make the software better without requiring hosting/a real DB:
 - **`allowed_origins` exact-match review** (`api/cors.py`) — should `www.`
   and the bare domain both be allowed automatically, or does a business
   register both explicitly? Currently: explicitly, exact match only.
+  Entries are now canonicalised on save (`utils/origins.py`) and a refused
+  origin explains itself instead of failing silently, but `www.` is still
+  a separate registration and that will catch people out.
+- **Make installing the widget easy — the current focus.** A misconfigured
+  install now says what is wrong, but pasting a `<script>` into site HTML
+  still assumes a client who can edit their own markup. Next: a portal
+  Install page with per-platform instructions (WordPress, Shopify, Wix,
+  Squarespace, GTM) plus a live "widget detected on your site" check.
+  After that, and only when a real client needs it, a WordPress plugin —
+  roughly 40% of the web and the right SMB skew, but a separate PHP
+  deliverable with its own release process.
 - **Widget bundle size** — `dist-widget/widget.js` is ~378KB (gzip
   ~116KB), unchanged by this session's code-splitting work (that only
   applies to the main app's routes; the standalone widget bundle is a
@@ -120,11 +131,23 @@ Things that make the software better without requiring hosting/a real DB:
   to every connected socket, filtered only by a cosmetic client-side `if`).
   13 live cross-tenant checks + 9 new regression tests.
 - **Multi-staff logins per business** — currently exactly one email/
-  password per `Business`. Fine for a solo owner, not for a team.
-- **No operator/admin view any more.** Closing the above turned
-  `/dashboard` into a client-scoped view. A genuine cross-business
-  operator console would now need real operator auth — a deliberate
-  feature, not a hole to leave open.
+  password per `Business`. Fine for a solo owner, not for a team. (This is
+  about *customer* accounts; the internal team console below is separate.)
+- ~~**No operator/admin view any more.**~~ **Built.** `/team/*` is an
+  internal console on its own identity space — `StaffUser` / `StaffSession`
+  and `get_current_staff`, so a customer's bearer token is never valid
+  there and vice versa. Lists every business, edits them, suspends
+  (which also deletes that business's live portal sessions rather than
+  leaving them valid until expiry), reactivates, shows cross-tenant token
+  usage, and can impersonate a business by minting an ordinary
+  `BusinessSession` so support can reproduce a client's setup from inside
+  their own portal. There is deliberately **no staff signup endpoint** —
+  accounts come from `scripts/create_staff_user.py`, which prompts for the
+  password interactively rather than taking it in argv.
+  - *Still open:* impersonation is recorded only via `logger.info`. There
+    is no audit-log table, so the app log is the whole trail. Fine for one
+    small trusted team; not fine once the team grows or an incident needs
+    reconstructing. Worth a real table before that point.
 
 ## Tier 3 — Product features still missing
 

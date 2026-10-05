@@ -123,6 +123,16 @@ export function XIcon({ className, style }: IconProps) {
   )
 }
 
+export function ChartIcon({ className, style }: IconProps) {
+  return (
+    <svg {...base} className={className} style={style}>
+      <path d="M4 20V4" />
+      <path d="M4 20h16" />
+      <path d="M8 20v-6M12.5 20v-9M17 20v-4" />
+    </svg>
+  )
+}
+
 export function SparkIcon({ className, style }: IconProps) {
   return (
     <svg {...base} className={className} style={style}>

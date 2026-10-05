@@ -223,6 +223,12 @@ A business must register the exact origin(s) it will embed from, either during o
 
 Because allowed origins live in the database and are evaluated per request, `/api/widget/*` is deliberately carved out of Starlette's app-wide `CORSMiddleware` (see `api/scoped_cors.py`), which answers preflight requests itself against a static list fixed at startup and never reaches routing.
 
+**A refused origin explains itself.** This is the most likely way a real install breaks — snippet pasted correctly, domain never registered — and it used to produce no error anywhere: the widget simply never appeared. Three things make it legible now:
+
+- Entries are canonicalised on save (`utils/origins.py`). A browser's `Origin` is always exactly `scheme://host[:port]`, so `theirsite.com`, a trailing slash or mixed case could never match and would fail invisibly. Paths, queries and case are normalised away; a missing scheme is refused rather than guessed, because `http` vs `https` cannot be inferred and a wrong guess recreates the same silent failure.
+- The `403` carries a CORS header, so the browser hands the message to the widget instead of discarding it, and the message names the exact value to register and where.
+- The CORS **preflight deliberately succeeds for any origin**. A preflight is permission to *send* a request, not permission to have the data. Refusing it there meant the browser blocked the real call with an opaque `Failed to fetch` and the explanatory `403` was unreachable. Enforcement happens on the real request, which is the only place it can answer readably.
+
 ### Style isolation
 
 The widget mounts into a shadow root, so the host page's CSS cannot affect it and its own compiled Tailwind styles cannot leak outward. A shadow root alone is not sufficient, so three further measures are in place:
@@ -251,8 +257,21 @@ Onboarding creates a login alongside the business record. From `/portal/login` a
 - Edit persona, greeting, branding colour, mascot image and allowed embed origins
 - Add, edit and delete knowledge rows, and re-run RAG ingestion on demand
 - View and copy the embed snippet
-- Review qualified leads
+- Review qualified leads, and expand any one of them to read the actual conversation behind its score and summary
 - Open the dashboard for live statistics, the conversion funnel, the lead pipeline and full conversation transcripts
+
+Being able to read the transcript matters more than it sounds: a score and summary are produced by an extraction model over a limited history window, so on a long conversation they can disagree with what was really said. The transcript is how a client catches that themselves instead of taking the extraction on trust.
+
+### Internal team console
+
+`/team/*` is the operator surface, and it runs on a **separate identity space** from customers — `StaffUser` / `StaffSession`, resolved by `get_current_staff`. A customer's bearer token is never valid on a team route and a staff token is never valid on a customer route, so a compromised customer session cannot reach cross-tenant data.
+
+It lists and edits every business, shows token usage grouped by business, and can:
+
+- **Suspend** a business — which also deletes that business's live portal sessions, rather than flipping a flag and leaving anyone already logged in with a working session until it expired.
+- **Impersonate** a business, by minting an ordinary `BusinessSession`, so support can reproduce a client's problem from inside their own portal instead of guessing from outside. Every impersonation is logged.
+
+There is deliberately **no staff signup endpoint**. Accounts are provisioned with `python -m scripts.create_staff_user <email> "<name>"`, which prompts for the password interactively rather than accepting it in argv, where it would land in shell history and process listings. Anyone who can create a staff account can read, edit and impersonate every client, so that is a considered CLI action rather than a form.
 
 ### Authentication and tenant isolation
 
@@ -303,6 +322,7 @@ The frontend mirrors this at the UI layer under `frontend/src/`: `hooks/` own th
 | `/api/auth/*` | Portal login and logout | Rate-limited |
 | `/api/portal/*` | Client self-service | Session token |
 | `/api/leads`, `/api/conversations`, `/api/analytics/*` | Dashboard data | Session token |
+| `/api/team/*` | Internal team console | Staff session token (separate identity space) |
 | `/ws/conversation/{id}` | Live conversation turns | Origin check before `accept()` |
 | `/ws/dashboard` | Live lead updates | Session token, scoped per business |
 

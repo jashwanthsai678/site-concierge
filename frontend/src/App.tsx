@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom'
+import { Route, BrowserRouter, Routes } from 'react-router-dom'
 import { queryClient } from '@/services/queryClient'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { RequireAuth } from '@/components/common/RequireAuth'
@@ -8,6 +8,7 @@ import { RequireAuth } from '@/components/common/RequireAuth'
 // Route-level code splitting — without this, visiting the demo/embeddable-
 // widget site downloaded the entire portal bundle (forms, mascot upload,
 // leads) and vice versa, none of which that visitor ever needed.
+const LandingPage = lazy(() => import('@/pages/LandingPage').then((m) => ({ default: m.LandingPage })))
 const AdSimulatorPage = lazy(() => import('@/pages/AdSimulatorPage').then((m) => ({ default: m.AdSimulatorPage })))
 const CompanyWebsiteLayout = lazy(() =>
   import('@/pages/CompanyWebsiteLayout').then((m) => ({ default: m.CompanyWebsiteLayout })),
@@ -36,6 +37,15 @@ const PortalEmbedPage = lazy(() =>
 const PortalLeadsPage = lazy(() =>
   import('@/pages/portal/PortalLeadsPage').then((m) => ({ default: m.PortalLeadsPage })),
 )
+const TeamLoginPage = lazy(() => import('@/pages/team/TeamLoginPage').then((m) => ({ default: m.TeamLoginPage })))
+const TeamLayout = lazy(() => import('@/pages/team/TeamLayout').then((m) => ({ default: m.TeamLayout })))
+const TeamBusinessesPage = lazy(() =>
+  import('@/pages/team/TeamBusinessesPage').then((m) => ({ default: m.TeamBusinessesPage })),
+)
+const TeamBusinessDetailPage = lazy(() =>
+  import('@/pages/team/TeamBusinessDetailPage').then((m) => ({ default: m.TeamBusinessDetailPage })),
+)
+const TeamUsagePage = lazy(() => import('@/pages/team/TeamUsagePage').then((m) => ({ default: m.TeamUsagePage })))
 const HomePage = lazy(() => import('@/pages/company-site/HomePage').then((m) => ({ default: m.HomePage })))
 const DestinationsPage = lazy(() =>
   import('@/pages/company-site/DestinationsPage').then((m) => ({ default: m.DestinationsPage })),
@@ -62,7 +72,7 @@ export default function App() {
       <BrowserRouter>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
-            <Route path="/" element={<Navigate to="/demo" replace />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/demo" element={<AdSimulatorPage />} />
             <Route path="/site/:slug" element={<CompanyWebsiteLayout />}>
               <Route index element={<HomePage />} />
@@ -94,6 +104,17 @@ export default function App() {
               <Route path="settings" element={<PortalSettingsPage />} />
               <Route path="embed" element={<PortalEmbedPage />} />
               <Route path="leads" element={<PortalLeadsPage />} />
+            </Route>
+            {/* Internal staff admin — completely separate auth (StaffUser/
+                StaffSession via /api/team/*) from the customer-facing
+                portal above, so it gets its own login route and layout
+                rather than reusing PortalLayout's guard. */}
+            <Route path="/team/login" element={<TeamLoginPage />} />
+            <Route path="/team" element={<TeamLayout />}>
+              <Route index element={<TeamBusinessesPage />} />
+              <Route path="businesses" element={<TeamBusinessesPage />} />
+              <Route path="businesses/:id" element={<TeamBusinessDetailPage />} />
+              <Route path="usage" element={<TeamUsagePage />} />
             </Route>
           </Routes>
         </Suspense>

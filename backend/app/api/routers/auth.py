@@ -32,6 +32,13 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
     ):
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
 
+    # A suspended business (see api/routers/team.py's suspend endpoint)
+    # already can't run its widget (widget.py's is_active check), but
+    # without this it could still log into its own portal — a suspension a
+    # client can just ignore isn't a suspension.
+    if not business.is_active:
+        raise HTTPException(status_code=403, detail="This account has been suspended. Contact support.")
+
     session = BusinessSession(
         business_id=business.id, token=new_session_token(),
         expires_at=utcnow() + timedelta(days=get_settings().session_ttl_days),
